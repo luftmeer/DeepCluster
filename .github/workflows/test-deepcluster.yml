@@ -32,5 +32,8 @@ jobs:
                 pip install torch numpy scikit-learn
                 pip install pytest pytest-cov
 
+#            - name: Testing with pytest
+#              run: pytest --cov
+
             - name: Testing with pytest
-              run: pytest --cov
+              run: PYTHONPATH=. pytest --cov # Since there is no setup.py, this should alternatively work as well
