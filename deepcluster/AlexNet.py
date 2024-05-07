@@ -83,6 +83,6 @@ class AlexNet(nn.Module):
         if self.sobel:
             X = self.sobel(X)
         X = self.features(X)
-        X = X.view(x.size(0), 256 * 6 * 6)
+        X = X.view(X.size(0), 256 * 6 * 6)
         X = self.classifier(X)
         return X
