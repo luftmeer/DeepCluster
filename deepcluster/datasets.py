@@ -1,9 +1,7 @@
-########################################################################################
-####            Code taken from:                                                    ####
-####  https://github.com/fhvilshoj/torch_imagenet/blob/master/imagenet_dataset.py   ####
-####  !Download needed!       !Not Tested!                                          ####
-########################################################################################
-
+"""
+Guidance:
+## https://towardsdatascience.com/downloading-and-using-the-imagenet-dataset-with-pytorch-f0908437c4be
+"""
 import os
 import pickle
 import pathlib
@@ -13,12 +11,16 @@ from natsort import natsorted
 
 import torch
 from torch.utils.data import Dataset
-
 import torchvision
 import torchvision.transforms as transforms
 
+## To integrate Imagenet set ??
+import clustpy
+from clustpy.data._utils import _get_download_dir  # etc.
+########
+
 # Use "[folder of this file]/images" as base path
-_base_path = (pathlib.Path(__file__).parent.absolute() / 'images').as_posix()
+_base_path = _get_download_dir("../data")
 
 
 def _get_additional_transforms(transform):
@@ -28,7 +30,30 @@ def _get_additional_transforms(transform):
     ])
 
 
+def transform_for_alexnet(T=None):
+    """
+    Standard transformation for AlexNet Input, as far as I found out.
+    """
+    mean = (0.485, 0.456, 0.406)
+    std = (0.229, 0.224, 0.225)
+
+    if T is None:
+        T = transforms.Compose(
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
+             transforms.ToTensor(),
+             transforms.Normalize(mean, std)]
+        )
+    return T
+
+
 class ImageNetDataset(Dataset):
+    ########################################################################################
+    ####            Code taken from:                                                    ####
+    ####  https://github.com/fhvilshoj/torch_imagenet/blob/master/imagenet_dataset.py   ####
+    ####  !Download needed!       !Not Tested!                                          ####
+    ########################################################################################
+
     def __init__(self, root_dir=_base_path, transform=None):
         self.root_dir = root_dir
         if self.root_dir[-1] != '/': self.root_dir += '/'
