@@ -20,59 +20,59 @@ class VGG16(nn.Module):
             # First Layer
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 2nd Layer
             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(), 
+            nn.ReLU(inplace=True), 
             # 3rd Layer
             nn.MaxPool2d(kernel_size = 2, stride = 2),
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 4th Layer
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size = 2, stride = 2),
             # 5th Layer
             nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 6th Layer
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 7th Layer
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size = 2, stride = 2),
             # 8th Layer
             nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 9th Layer
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 10th Layer
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size = 2, stride = 2),
             # 11th Layer
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 12th Layer
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 13th Layer
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size = 2, stride = 2)
         )
 
@@ -80,14 +80,15 @@ class VGG16(nn.Module):
             # 14th Layer
             nn.Dropout(0.5),
             nn.Linear(512 * 7 * 7, 4096),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 15th Layer
             nn.Dropout(0.5),
             nn.Linear(4096, 4096),
-            nn.ReLU(),
-            # 16th Layer
-            nn.Linear(4096, num_classes)
+            nn.ReLU(inplace=True),
         )
+        
+        # 16th Layer
+        self.top_layer = nn.Linear(4096, num_classes)
         
         # Define Sobel Filter
         if sobel:
@@ -121,4 +122,6 @@ class VGG16(nn.Module):
         X = self.features(X)
         X = X.view(X.size(0), 512 * 7 * 7)
         X = self.classifier(X)
+        if self.top_layer:
+            X = self.top_layer(X)
         return X

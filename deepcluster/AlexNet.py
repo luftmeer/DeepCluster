@@ -20,25 +20,25 @@ class AlexNet(nn.Module):
             # First Layer
             nn.Conv2d(in_channels=3, out_channels=96, kernel_size=11, stride=4, padding=0),
             nn.BatchNorm2d(num_features=96),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
             # 2nd Layer
             nn.Conv2d(in_channels=96, out_channels=256, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(num_features=256),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
             # 3rd Layer
             nn.Conv2d(in_channels=256, out_channels=384, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(384),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 4th Layer
             nn.Conv2d(in_channels=384, out_channels=384, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(num_features=384),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             # 5th Layer
             nn.Conv2d(in_channels=384, out_channels=256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(num_features=256),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2)
         )
         
@@ -46,12 +46,13 @@ class AlexNet(nn.Module):
         self.classifier = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(256 * 6 * 6, 4096),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
             nn.Linear(4096, 4096),
-            nn.ReLU(),
-            nn.Linear(4096, num_classes)
+            nn.ReLU(inplace=True),
         )
+        
+        self.top_layer = nn.Linear(4096, num_classes)
         
         # Define Sobel Filter
         if sobel:
@@ -85,4 +86,6 @@ class AlexNet(nn.Module):
         X = self.features(X)
         X = X.view(X.size(0), 256 * 6 * 6)
         X = self.classifier(X)
+        if self.top_layer:
+            X = self.top_layer(X)
         return X
