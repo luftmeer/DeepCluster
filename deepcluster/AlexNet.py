@@ -2,23 +2,26 @@ from torch import nn
 import torch
 
 class AlexNet(nn.Module):
-    def __init__(self, num_classes: int=1000, sobel: bool=True):
+    def __init__(self, input_dim: int=3, num_classes: int=1000, sobel: bool=True):
         """Base AlexNet implementation based on the paper "ImageNet Classification with Deep Convolutional Neural Networks" by A. Krizhevsky, I. Sutskever, and G. E. Hinton at NeurIPS 2012
 
         The Convolutional Neural Network consists of 5 feature layers and 3 classification layers.
 
         Parameters
         ----------
-            num_classes: int, default=1000
-                Amount of classes in the data set.
+        input_dim: int, default=3
+            Input dimension of the dataset.
             
-            sobel: bool, default=True
-                When set to True, the sobel filters are added and adjust the dataset to grayscale and enhance the edge visibility.
+        num_classes: int, default=1000
+            Amount of classes in the data set.
+        
+        sobel: bool, default=True
+            When set to True, the sobel filters are added and adjust the dataset to grayscale and enhance the edge visibility.
         """
         super(AlexNet, self).__init__()
         self.features = nn.Sequential(
             # First Layer
-            nn.Conv2d(in_channels=3, out_channels=96, kernel_size=11, stride=4, padding=0),
+            nn.Conv2d(in_channels=input_dim, out_channels=96, kernel_size=11, stride=4, padding=2),
             nn.BatchNorm2d(num_features=96),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -84,7 +87,7 @@ class AlexNet(nn.Module):
         if self.sobel:
             X = self.sobel(X)
         X = self.features(X)
-        X = X.view(X.size(0), 256 * 6 * 6)
+        X = torch.flatten(X, 1)
         X = self.classifier(X)
         if self.top_layer:
             X = self.top_layer(X)
