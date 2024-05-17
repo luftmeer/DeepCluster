@@ -3,6 +3,7 @@ import numpy as np
 from torch.utils import data
 from .pseudo_labeled_dataset import PseudoLabeledData
 from torchvision.transforms import Compose
+import torch
 
 class KMeans():
     def __init__(self, k: int):
@@ -15,7 +16,7 @@ class KMeans():
         """
         self.k = k
         
-    def fit(self, data: np.ndarray) -> float:
+    def fit(self, data: np.ndarray, pca: int=256) -> float:
         """Performs KMeans Clustering based on Facebooks AI Research Method
 
         Args:
@@ -25,7 +26,7 @@ class KMeans():
             float: _description_
         """
         # PCA-reducting, whitening and L2-normalization
-        xb = self.preprocess_features(data)
+        xb = self.preprocess_features(data, pca)
         
         # Clustering
         I, loss = self.run_kmeans(xb, self.k)
@@ -83,16 +84,26 @@ class KMeans():
         
         clus.niter = 20
         clus.max_points_per_centroid = 10000000
-        res = faiss.StandardGpuResources() # Declare GPU Resource
-        flat_config = faiss.GpuIndexFlatConfig()
-        flat_config.useFloat16 = False
-        flat_config.device = 0
-        index = faiss.GpuIndexFlatL2(res, dim, flat_config)
+        
+        # Prepare index either for CPU or GPU computation
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device.type == 'cpu':
+            index = faiss.IndexFlatL2(dim)
+        
+        elif device.type == 'cuda':
+            res = faiss.StandardGpuResources() # Declare GPU Resource
+            flat_config = faiss.GpuIndexFlatConfig()
+            flat_config.useFloat16 = False
+            flat_config.device = 0
+            index = faiss.GpuIndexFlatL2(res, dim, flat_config)
+        
+        else: # Device unkown
+            raise TypeError(f'Unkown device: {device.type}')
         
         # Perform training
         clus.train(data, index)
         _, I = index.search(data, 1)
-        losses = faiss.vector_to_array(clus.obj)
+        losses = faiss.vector_to_array(clus.centroids)
         
         return [int(n[0]) for n in I], losses[-1]
     

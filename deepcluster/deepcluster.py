@@ -1,6 +1,7 @@
 import torch.utils
 import torch.utils.data
 #from deepcluster.AlexNet import AlexNet
+from torchvision import transforms
 from torch import optim
 from torch import nn
 from torch.utils import data
@@ -22,10 +23,12 @@ class DeepCluster(BaseEstimator):
                 optim: optim.Optimizer, # Optimizer for the parameters of the model
                 optim_tl: optim.Optimizer, # Optimizer for the Top Layer Parameters
                 loss_criterion: object, # PyTorch Loss Function
+                cluster_assign_tf: transforms,
                 epochs: int=500, # Training Epoch
                 batch_size: int=256,
                 k: int=1000,
                 verbose: bool=False, # Verbose output while training
+                pca_reduction: int=256, # PCA reduction value for the amount of features to be kept
                 ):
         self.model = model
         #self.data = data
@@ -36,6 +39,8 @@ class DeepCluster(BaseEstimator):
         self.batch_size = batch_size
         self.k = k
         self.verbose = verbose
+        self.pca = pca_reduction
+        self.cluster_assign_transform = cluster_assign_tf
         
     def save_checkpoint(self) -> bool:
         """Helper Function to contiously store a checkpoint of the current state of the CNN training
@@ -62,14 +67,15 @@ class DeepCluster(BaseEstimator):
         clustering = kmeans.KMeans(self.k)
         
         for epoch in range(self.epochs):
+            if self.verbose: print(f'{epoch=}')
             # Compute Features
             features = self.compute_features(data)
             
             # Cluster features
-            clustering_loss = clustering.fit(features)
+            clustering_loss = clustering.fit(features, self.pca)
             
             # Assign Pseudo-Labels
-            train_dataset = clustering.cluster_assign(clustering.images_list, data.dataset)
+            train_dataset = clustering.cluster_assign(clustering.images_list, data.dataset, self.cluster_assign_transform)
             
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
@@ -105,14 +111,14 @@ class DeepCluster(BaseEstimator):
 
         losses = []
         for i, (input, target) in enumerate(train_data):
+            if self.verbose: print(f'training @ {i}')
             # TODO: Add checkpoint save
             
-            input = input.requires_grad(True)
-            target = target.requires_grad(True)
+            input.requires_grad = True
             
             output = self.model(input)
             loss = self.loss(output, target)
-            losses.append(loss.datta[0] * input.tensor_size(0))
+            losses.append(loss.data[0] * input.tensor_size(0))
             
             # Optimize
             self.optimizer.zero_grad()
@@ -139,6 +145,7 @@ class DeepCluster(BaseEstimator):
             print('Compute Features')
         
         for i, (input, _) in enumerate(data):
+            if self.verbose and i % 100 == 0: print(f'Currently at {i} of {len(data)}')
             input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
             

@@ -1,6 +1,7 @@
 from torch.utils import data
 import torchvision
 from PIL import Image
+import torch
 
 class PseudoLabeledData(data.Dataset):
     def __init__(self, image_idxs, pseudolabels, dataset, transform: torchvision.transforms.Compose) -> None:
@@ -19,6 +20,9 @@ class PseudoLabeledData(data.Dataset):
     
     def __getitem__(self, index):
         path, pseudolabel = self.images[index]
+        if isinstance(path, torch.Tensor):
+            return path, pseudolabel
+        
         with open(path, 'rb') as f:
             img = Image.open(f)
         
