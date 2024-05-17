@@ -96,16 +96,17 @@ class DeepCluster(BaseEstimator):
     def predict(self):
         pass
     
-    def train(self, train_data: torch.Tensor) -> float:
-        """_summary_
+    def train(self, train_data: data.DataLoader) -> float:
+        """Training method for each epoch using the training dataset.
 
         Parameters
         ----------
-            train_data (torch.Tensor): _description_
+        train_data: data.DataLoader
+            Training dataset for the CNN model.
 
         Returns
         -------
-            float: _description_
+        float: The average loss from the training.
         """
         # Set model to train mode
         self.model.train()
