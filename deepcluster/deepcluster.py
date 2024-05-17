@@ -148,7 +148,7 @@ class DeepCluster(BaseEstimator):
             print('Compute Features')
         
         for i, (input, _) in enumerate(data):
-            if self.device.type() == 'cuda':
+            if self.device.type == 'cuda':
                 input = input.cuda()
             if self.verbose and i % 100 == 0: print(f'Currently at {i} of {len(data)}')
             input.requires_grad = True
