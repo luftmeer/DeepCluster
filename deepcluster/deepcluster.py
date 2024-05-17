@@ -41,6 +41,7 @@ class DeepCluster(BaseEstimator):
         self.verbose = verbose
         self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
     def save_checkpoint(self) -> bool:
         """Helper Function to contiously store a checkpoint of the current state of the CNN training
@@ -113,7 +114,8 @@ class DeepCluster(BaseEstimator):
         for i, (input, target) in enumerate(train_data):
             if self.verbose: print(f'training @ {i}')
             # TODO: Add checkpoint save
-            
+            if self.device.type == 'cuda':
+                input, target = input.cuda(), target.cuda()
             input.requires_grad = True
             
             output = self.model(input)
@@ -145,6 +147,8 @@ class DeepCluster(BaseEstimator):
             print('Compute Features')
         
         for i, (input, _) in enumerate(data):
+            if self.device.type() == 'cuda':
+                input = input.cuda()
             if self.verbose and i % 100 == 0: print(f'Currently at {i} of {len(data)}')
             input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
