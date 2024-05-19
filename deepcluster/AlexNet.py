@@ -69,26 +69,44 @@ class AlexNet(nn.Module):
             self.sobel = nn.Sequential(grayscale, filter)
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
-        
-        
+                
     def forward(self, X: torch.Tensor):
-        """Training function for the AlexNet Model.
+            if self.sobel:
+                X = self.sobel(X)
+            if self.sobel and torch.isnan(X).any():
+                print("NaN values found after sobel")
+            X = self.features(X)
+            if torch.isnan(X).any():
+                print("NaN values found after features")
+            X = torch.flatten(X, 1)
+            X = self.classifier(X)
+            if torch.isnan(X).any():
+                print("NaN values found after classifier")
+            if self.top_layer:
+                X = self.top_layer(X)
+            if torch.isnan(X).any():
+                print("NaN values found after top_layer")
+            return X
+        
+        
+    # def forward(self, X: torch.Tensor):
+    #     """Training function for the AlexNet Model.
 
-        Parameter
-        ---------
-            X: torch.Tensor
-                Batched image dataset to be trained on.
+    #     Parameter
+    #     ---------
+    #         X: torch.Tensor
+    #             Batched image dataset to be trained on.
 
-        Returns
-        -------
-            torch.Tensor
-                #TODO tbd
-        """
-        if self.sobel:
-            X = self.sobel(X)
-        X = self.features(X)
-        X = torch.flatten(X, 1)
-        X = self.classifier(X)
-        if self.top_layer:
-            X = self.top_layer(X)
-        return X
+    #     Returns
+    #     -------
+    #         torch.Tensor
+    #             #TODO tbd
+    #     """
+        # if self.sobel:
+        #     X = self.sobel(X)
+        # X = self.features(X)
+        # X = torch.flatten(X, 1)
+        # X = self.classifier(X)
+        # if self.top_layer:
+        #     X = self.top_layer(X)
+        # return X
