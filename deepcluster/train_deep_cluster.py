@@ -66,7 +66,7 @@ def main():
         ]
     )
     
-    batch_size = 4
+    batch_size = 32
 
     DC_model = DeepCluster(
         model=model,
@@ -78,7 +78,7 @@ def main():
         verbose=True,
         pca_reduction=3,
         cluster_assign_tf=ca_tf,
-        epochs=1
+        epochs=3
     )
 
     loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
