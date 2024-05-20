@@ -115,6 +115,8 @@ class DeepCluster(BaseEstimator):
         self.model.train()
 
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        different_classes = set()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             if self.device.type == 'cuda':
                 input, target = input.cuda(), target.cuda()
@@ -135,6 +137,13 @@ class DeepCluster(BaseEstimator):
             
             # add the loss to the losses tensor
             losses[i] = loss.item()
+            
+            # calculate accuracy and add it to accuracies tensor
+            _, predicted = output.max(1)
+            accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
+            
+            # add the different classes to the set
+            different_classes.update(target.cpu().numpy())
 
             # Backward pass and optimize
             self.optimizer.zero_grad()
@@ -146,9 +155,16 @@ class DeepCluster(BaseEstimator):
             # Free up GPU memory
             del input, target, output, loss
             torch.cuda.empty_cache()
-            
-        print("This is the losses")
+        print("-"*20, "Results", "-"*20)
+        print("These are the losses")
         print(losses)
+        print("-"*50)
+        print("This is the accuracy")
+        print(torch.mean(accuracies))
+        print("-"*50)
+        print("These are the different classes")
+        print(different_classes)
+        print("-"*50)
         return torch.mean(losses)
 
     
