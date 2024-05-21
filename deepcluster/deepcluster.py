@@ -35,6 +35,5 @@ class DeepCluster:
 
         return prediction, pseudo_labels
 
-
     def fit(self, X):
         pass
