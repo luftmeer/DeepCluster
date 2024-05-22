@@ -111,7 +111,7 @@ def main():
         ]
     )
     
-    batch_size = 32
+    batch_size = 64
 
     DC_model = DeepCluster(
         model=model,

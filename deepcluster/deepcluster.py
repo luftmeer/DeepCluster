@@ -66,7 +66,7 @@ class DeepCluster(BaseEstimator):
         #TODO: Load Checkpoint implementation
         
         self.model.features = torch.nn.DataParallel(self.model.features)
-        self.model.cuda()
+        self.model.to(self.device)
         cudnn.benchmark = True
         fd = int(self.model.top_layer.weight.size()[1])
         
@@ -211,20 +211,21 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
-            if self.device.type == 'cuda':
-                input = input.cuda()
+            input = input.to(self.device)
             
             input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
             
             if i == 0:
                 features = np.zeros((len(data.dataset), aux.shape[1]), dtype=np.float32)
+                print(f'{features.shape=}')
                 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
                 features[i*self.batch_size: (i+1)*self.batch_size] = aux
             else:
                 # Rest of the data
+                print(f'{i=}')
                 features[i*self.batch_size:] = aux
                 
             # Free up GPU memory
