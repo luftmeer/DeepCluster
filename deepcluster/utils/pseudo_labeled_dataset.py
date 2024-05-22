@@ -2,6 +2,7 @@ from torch.utils import data
 import torchvision
 from PIL import Image
 import torch
+import tqdm
 
 class PseudoLabeledData(data.Dataset):
     def __init__(self, image_idxs, pseudolabels, dataset, transform: torchvision.transforms.Compose) -> None:
@@ -11,7 +12,7 @@ class PseudoLabeledData(data.Dataset):
     def create_dataset(self, image_idxs, pseudolabels, dataset) -> list:
         label_to_index = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
-        for i, idx in enumerate(image_idxs):
+        for i, idx in tqdm(enumerate(image_idxs), desc='Creating Training Dataset', total=len(pseudolabels)):
             path = dataset[idx][0]
             pseudolabel = label_to_index[pseudolabels[i]]
             images.append((path, pseudolabel))
