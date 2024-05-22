@@ -2,7 +2,7 @@ from torch.utils import data
 import torchvision
 from PIL import Image
 import torch
-import tqdm
+from tqdm import tqdm
 
 class PseudoLabeledData(data.Dataset):
     def __init__(self, image_idxs, pseudolabels, dataset, transform: torchvision.transforms.Compose) -> None:
