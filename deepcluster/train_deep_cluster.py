@@ -7,9 +7,54 @@ import torchvision
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize, RandomResizedCrop, RandomHorizontalFlip
 import faiss
 import numpy as np
+from torch.utils.data.sampler import SubsetRandomSampler
+
+def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size: float=0.1, shuffle=True) -> tuple:
+    transform = Compose(
+            [
+                Resize(256),
+                CenterCrop(224),
+                ToTensor(),
+                Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225]
+                )
+            ]
+        )
+    print("Loading Dataset...")
+    train_data = torchvision.datasets.CIFAR10(
+        root=data_dir, train=True,
+        download=True, transform=transform,
+    )
+    
+    valid_data = torchvision.datasets.CIFAR10(
+        root=data_dir, train=True,
+        download=True, transform=transform,
+    )
+    print("Done Loading Dataset.")
+    
+    num_train = len(train_data)
+    indices = list(range(num_train))
+    split = int(np.floor(valid_size * num_train))
+
+    if shuffle:
+        np.random.seed(seed)
+        np.random.shuffle(indices)
+
+    train_idx, valid_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+    valid_sampler = SubsetRandomSampler(valid_idx)
+
+    train_loader = torch.utils.data.DataLoader(
+        train_data, batch_size=batch_size, sampler=train_sampler)
+
+    valid_loader = torch.utils.data.DataLoader(
+        valid_data, batch_size=batch_size, sampler=valid_sampler)
+
+    return (train_loader, valid_loader)
 
 def main():
-    print("Loading Dataset...")
+    """ print("Loading Dataset...")
     cifar10 = torchvision.datasets.CIFAR10(
         root='./data', train=True,
         download=True, transform = Compose(
@@ -24,7 +69,7 @@ def main():
             ]
         )
     )
-    print("Done Loading Dataset.")
+    print("Done Loading Dataset.") """
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
@@ -81,10 +126,12 @@ def main():
         epochs=3
     )
 
-    loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
+    #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
+    train_loader, valid_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    
     print("Starting Training...")
-    DC_model.fit(loader)
+    DC_model.fit(train_loader, valid_loader)
     print("Training Done.")
 
 if __name__ == '__main__':
