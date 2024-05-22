@@ -11,15 +11,15 @@ import pathlib
 from torch import Tensor
 from torch.utils.data import Dataset
 
-
 DATA_PATH = pathlib.Path("../data/imagenet")
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, root: pathlib.Path = DATA_PATH, transform=None):
+    def __init__(self, root: pathlib.Path = DATA_PATH, transform=None, info=False):
         self.data = tinyimagenet.TinyImageNet(root=root, split="train")
         self.transform = transform
-        self.print_info()
+        if info:
+            self.print_info()
 
     def print_info(self):
         ex_shape = self[0].shape
@@ -32,7 +32,7 @@ class ImageNetDataset(Dataset):
               f"shape: {ex_shape}\n"
               f"dtype: {ex_dtype}\n"
               f"transform: {self.transform}\n"
-              f"######################\n")
+              f"######################\n\n")
 
     def __len__(self):
         return len(self.data)
@@ -48,4 +48,4 @@ class ImageNetDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = ImageNetDataset()
+    dataset = ImageNetDataset(info=True)

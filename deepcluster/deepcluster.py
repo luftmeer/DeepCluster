@@ -23,6 +23,7 @@ class DeepCluster:
         self.cluster = KMeans(n_clusters=n_classes)
         self.transform = ...
 
+
     def predict(self, img: torch.Tensor):
         ## Apply ConvNet
         img = self.transform(img)
