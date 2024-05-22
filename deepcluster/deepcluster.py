@@ -8,10 +8,10 @@ from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
 import faiss
-from .utils import kmeans
+from utils import kmeans
 import os
 from sklearn.metrics import normalized_mutual_info_score
-
+from tqdm import tqdm
 
 import torch
 from sklearn.cluster import KMeans
@@ -34,7 +34,7 @@ class DeepCluster(BaseEstimator):
         #self.data = data
         self.optimizer = optim
         self.optimizer_tl = optim_tl
-        self.loss = loss_criterion
+        self.loss_criterion = loss_criterion
         self.epochs = epochs
         self.batch_size = batch_size
         self.k = k
@@ -68,7 +68,7 @@ class DeepCluster(BaseEstimator):
         clustering = kmeans.KMeans(self.k)
         
         for epoch in range(self.epochs):
-            if self.verbose: print(f'{epoch=}')
+            if self.verbose: print(f'{"="*25} Epoch {epoch + 1} {"="*25}')
             # Compute Features
             features = self.compute_features(data)
             
@@ -91,6 +91,9 @@ class DeepCluster(BaseEstimator):
                 )
 
             loss = self.train(train_data)
+            
+            print(f'Classification Loss: {loss}')
+            print(f'Clustering Loss: {clustering_loss}')
 
 
     def predict(self):
@@ -111,26 +114,59 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
-        losses = []
-        for i, (input, target) in enumerate(train_data):
-            if self.verbose: print(f'training @ {i}')
-            # TODO: Add checkpoint save
-            input = input.to(self.device)
-            target = target.to(self.device)
+        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        different_classes = set()
+        for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+            if self.device.type == 'cuda':
+                input, target = input.cuda(), target.cuda()
             input.requires_grad = True
-            
+
+            # Forward pass
             output = self.model(input)
-            loss = self.loss(output, target)
-            losses.append(loss.data[0] * input.tensor_size(0))
+            loss = self.loss_criterion(output, target)
             
-            # Optimize
+            # check Nan Loss
+            if torch.isnan(loss):
+                print("targets", target)
+                print("Output", output)
+                print("Input", input)
+                print("Nan Loss", loss)
+                
+                break
+            
+            # add the loss to the losses tensor
+            losses[i] = loss.item()
+            
+            # calculate accuracy and add it to accuracies tensor
+            _, predicted = output.max(1)
+            accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
+            
+            # add the different classes to the set
+            different_classes.update(target.cpu().numpy())
+
+            # Backward pass and optimize
             self.optimizer.zero_grad()
             self.optimizer_tl.zero_grad()
-            self.loss.backward()
+            loss.backward()
             self.optimizer.step()
             self.optimizer_tl.step()
-        
-        return np.mean(losses)
+
+            # Free up GPU memory
+            del input, target, output, loss
+            torch.cuda.empty_cache()
+        print("-"*20, "Results", "-"*20)
+        print("These are the losses")
+        print(losses)
+        print("-"*50)
+        print("This is the accuracy")
+        print(torch.mean(accuracies))
+        print("-"*50)
+        print("These are the different classes")
+        print(different_classes)
+        print("-"*50)
+        return torch.mean(losses)
+
     
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
@@ -144,13 +180,10 @@ class DeepCluster(BaseEstimator):
         -------
         np.ndarray: Predicted features.
         """
-        if self.verbose:
-            print('Compute Features')
-        
-        for i, (input, _) in enumerate(data):
+        for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             if self.device.type == 'cuda':
                 input = input.cuda()
-            if self.verbose and i % 100 == 0: print(f'Currently at {i} of {len(data)}')
+            
             input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
             
@@ -163,5 +196,9 @@ class DeepCluster(BaseEstimator):
             else:
                 # Rest of the data
                 features[i*self.batch_size:] = aux
+                
+            # Free up GPU memory
+            del input, aux
+            torch.cuda.empty_cache()
                 
         return features
