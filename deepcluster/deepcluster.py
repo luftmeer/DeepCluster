@@ -218,15 +218,12 @@ class DeepCluster(BaseEstimator):
             
             if i == 0:
                 features = np.zeros((len(data.sampler.indices), aux.shape[1]), dtype=np.float32)
-                print(f'{features.shape=}')
                 
             aux = aux.astype(np.float32)
-            print(f'{aux.shape=}\n{aux=}')
             if i < len(data) - 1:
                 features[i*self.batch_size: (i+1)*self.batch_size] = aux
             else:
                 # Rest of the data
-                print(f'{i=}')
                 features[i*self.batch_size:] = aux
                 
             # Free up GPU memory
