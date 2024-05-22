@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim.optimizer
 import clustpy
 
-from datasets import ImageNetDataset, transform_for_alexnet
+from datasets import ImageNetDataset, alexnet_transform
 from torchvision.models import alexnet, AlexNet
 from sklearn.cluster import KMeans
 
@@ -23,7 +23,7 @@ class DeepCluster:
         self.cluster = KMeans(n_clusters=n_classes)
 
         ## Pre-processing
-        self.transform = transform_for_alexnet
+        self.transform = alexnet_transform
 
     def predict(self, img: torch.Tensor):
         ## Apply ConvNet
