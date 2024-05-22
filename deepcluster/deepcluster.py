@@ -21,9 +21,7 @@ class DeepCluster:
 
         ## Clustering algorithm
         self.cluster = KMeans(n_clusters=n_classes)
-
-        ## Pre-processing
-        self.transform = alexnet_transform
+        self.transform = ...
 
     def predict(self, img: torch.Tensor):
         ## Apply ConvNet
