@@ -25,21 +25,22 @@ alexnet_transform = T.Compose([
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self):
-        train_set = tinyimagenet.TinyImageNet(root=DATA_PATH,
-                                              split="train",
-                                              transform=alexnet_transform)
+    def __init__(self, transform=None):
+        imagenet = tinyimagenet.TinyImageNet(root=DATA_PATH, split="train")
+        self.data = [img for (img, target) in imagenet]
+        self.transform = lambda x: x
 
-        test_set = tinyimagenet.TinyImageNet(root=DATA_PATH,
-                                             split="test",
-                                             transform=alexnet_transform)
-
-        self.data = ...
-        self.transform = ...
+        if transform is not None:
+            self.transform = transform
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item):
-        pass
+        return self.transform(self.data[item])
 
+
+dataset = ImageNetDataset()
+img = dataset[0]
+
+print(img)
