@@ -115,8 +115,8 @@ class DeepCluster(BaseEstimator):
         for i, (input, target) in enumerate(train_data):
             if self.verbose: print(f'training @ {i}')
             # TODO: Add checkpoint save
-            if self.device.type == 'cuda':
-                input, target = input.cuda(), target.cuda()
+            input = input.to(self.device)
+            target = target.to(self.device)
             input.requires_grad = True
             
             output = self.model(input)
