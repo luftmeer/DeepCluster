@@ -6,3 +6,5 @@ notebooks/
 
 # pytest
 .coverage
+
+data/

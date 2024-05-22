@@ -4,6 +4,7 @@ import torch.utils.data
 from torchvision import transforms
 from torch import optim
 from torch import nn
+from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
@@ -64,11 +65,19 @@ class DeepCluster(BaseEstimator):
     def fit(self, data: data.DataLoader):
         #TODO: Load Checkpoint implementation
         
+        self.model.features = torch.nn.DataParallel(self.model.features)
+        self.model.cuda()
+        cudnn.benchmark = True
+        fd = int(self.model.top_layer.weight.size()[1])
+        
         # Set KMeans Clustering
         clustering = kmeans.KMeans(self.k)
-        
         for epoch in range(self.epochs):
             if self.verbose: print(f'{"="*25} Epoch {epoch + 1} {"="*25}')
+            # Remove head
+            self.model.top_layer = None
+            self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
+            
             # Compute Features
             features = self.compute_features(data)
             
@@ -90,6 +99,15 @@ class DeepCluster(BaseEstimator):
                 pin_memory=True,
                 )
 
+            # Add Top Layer
+            classifiers = list(self.model.classifier.children())
+            classifiers.append(nn.ReLU(inplace=True).cuda())
+            self.model.classifier = nn.Sequential(*classifiers)
+            self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
+            self.model.top_layer.weight.data.normal_(0, 0.01)
+            self.model.top_layer.bias.data.zero_()
+            self.model.top_layer.cuda()
+            
             loss = self.train(train_data)
             
             print(f'Classification Loss: {loss}')
