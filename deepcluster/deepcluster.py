@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim.optimizer
 import clustpy
 
-from datasets import ImageNetDataset, alexnet_transform
+from datasets import ImageNetDataset
 from torchvision.models import alexnet, AlexNet
 from sklearn.cluster import KMeans
 

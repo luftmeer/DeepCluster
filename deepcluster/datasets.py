@@ -18,29 +18,30 @@ import tinyimagenet
 
 DATA_PATH = pathlib.Path("../data/imagenet")
 
-alexnet_transform = T.Compose([
-    T.ToTensor(),
-    T.Resize((224, 224)),
-])
-
 
 class ImageNetDataset(Dataset):
-    def __init__(self, transform=None):
-        imagenet = tinyimagenet.TinyImageNet(root=DATA_PATH, split="train")
-        self.data = [img for (img, target) in imagenet]
-        self.transform = lambda x: x
-
+    def __init__(self, root: pathlib.Path = DATA_PATH, transform=None):
+        self.data = tinyimagenet.TinyImageNet(root=root, split="train")
+        self.transform = T.Compose([])
         if transform is not None:
             self.transform = transform
+
+        print(f"ImageNet Loaded.\n"
+              f"######################\n"
+              f"size: {len(self.data)}\n"
+              f"dtype: {self.data[0][0].dtype}\n"
+              f"transform: {transform}\n"
+              f"######################\n")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item):
-        return self.transform(self.data[item])
+        img, target = self.data[item]
+        return self.transform(img)
 
 
 dataset = ImageNetDataset()
 img = dataset[0]
 
-print(img)
+print(img.shape)
