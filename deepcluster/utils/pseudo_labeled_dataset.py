@@ -12,7 +12,7 @@ class PseudoLabeledData(data.Dataset):
     def create_dataset(self, image_idxs, pseudolabels, dataset) -> list:
         label_to_index = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
-        for i, idx in tqdm(enumerate(image_idxs), desc='Creating Training Dataset', total=len(pseudolabels)):
+        for i, idx in tqdm(enumerate(image_idxs), desc='Creating Training Dataset', total=len(image_idxs)):
             path = dataset[idx][0]
             pseudolabel = label_to_index[pseudolabels[i]]
             images.append((path, pseudolabel))
