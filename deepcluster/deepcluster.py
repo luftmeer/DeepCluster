@@ -62,7 +62,7 @@ class DeepCluster(BaseEstimator):
         """
         pass
     
-    def fit(self, data: data.DataLoader, validation_data: data.DataLoader):
+    def fit(self, data: data.DataLoader, validation_data: data.DataLoader, remove_tl: bool=False):
         #TODO: Load Checkpoint implementation
         
         self.model.features = torch.nn.DataParallel(self.model.features)
@@ -74,9 +74,11 @@ class DeepCluster(BaseEstimator):
         clustering = kmeans.KMeans(self.k)
         for epoch in range(self.epochs):
             if self.verbose: print(f'{"="*25} Epoch {epoch + 1} {"="*25}')
-            # Remove head
-            self.model.top_layer = None
-            self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
+            
+            if remove_tl:
+                # Remove head
+                self.model.top_layer = None
+                self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
             
             # Compute Features
             features = self.compute_features(data)
@@ -99,14 +101,15 @@ class DeepCluster(BaseEstimator):
                 pin_memory=True,
                 )
 
-            # Add Top Layer
-            classifiers = list(self.model.classifier.children())
-            classifiers.append(nn.ReLU(inplace=True).cuda())
-            self.model.classifier = nn.Sequential(*classifiers)
-            self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
-            self.model.top_layer.weight.data.normal_(0, 0.01)
-            self.model.top_layer.bias.data.zero_()
-            self.model.top_layer.cuda()
+            if remove_tl:
+                # Add Top Layer
+                classifiers = list(self.model.classifier.children())
+                classifiers.append(nn.ReLU(inplace=True).to(self.device))
+                self.model.classifier = nn.Sequential(*classifiers)
+                self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
+                self.model.top_layer.weight.data.normal_(0, 0.01)
+                self.model.top_layer.bias.data.zero_()
+                self.model.top_layer.to(self.device)
             
             loss = self.train(train_data)
             
