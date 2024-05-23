@@ -62,7 +62,7 @@ class DeepCluster(BaseEstimator):
         """
         pass
     
-    def fit(self, data: data.DataLoader, validation_data: data.DataLoader, remove_tl: bool=False):
+    def fit(self, data: data.DataLoader, remove_tl: bool=False):
         #TODO: Load Checkpoint implementation
         
         self.model.features = torch.nn.DataParallel(self.model.features)
@@ -115,19 +115,6 @@ class DeepCluster(BaseEstimator):
             
             print(f'Classification Loss: {loss}')
             print(f'Clustering Loss: {clustering_loss}')
-            
-            with torch.no_grad():
-                correct = 0
-                total = 0
-                for _, (images, targets) in tqdm(enumerate(validation_data), 'Validating', total=len(validation_data)):
-                    images = images.to(self.device)
-                    targets = targets.to(self.device)
-                    outputs = self.model(images)
-                    _, predicted = torch.max(outputs.data, 1)
-                    total += targets.size(0)
-                    correct += (predicted == targets).sum().item()
-                    del images, targets, outputs
-            print(f'Accuracy of the network on the validation images: {100 * correct / total}')
 
     def predict(self):
         pass

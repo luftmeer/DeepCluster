@@ -26,11 +26,7 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size:
         root=data_dir, train=True,
         download=True, transform=transform,
     )
-    
-    valid_data = torchvision.datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=transform,
-    )
+
     print("Done Loading Dataset.")
     
     num_train = len(train_data)
@@ -43,15 +39,11 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size:
 
     train_idx, valid_idx = indices[split:], indices[:split]
     train_sampler = SubsetRandomSampler(train_idx)
-    valid_sampler = SubsetRandomSampler(valid_idx)
 
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=batch_size, sampler=train_sampler)
 
-    valid_loader = torch.utils.data.DataLoader(
-        valid_data, batch_size=batch_size, sampler=valid_sampler)
-
-    return (train_loader, valid_loader)
+    return train_loader
 
 def main():
     """ print("Loading Dataset...")
@@ -128,10 +120,10 @@ def main():
 
     #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
-    train_loader, valid_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
     
     print("Starting Training...")
-    DC_model.fit(train_loader, valid_loader)
+    DC_model.fit(train_loader)
     print("Training Done.")
 
 if __name__ == '__main__':
