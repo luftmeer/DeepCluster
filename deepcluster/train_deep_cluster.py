@@ -7,7 +7,7 @@ import torchvision
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize, RandomResizedCrop, RandomHorizontalFlip
 import faiss
 import numpy as np
-from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data.sampler import RandomSampler
 
 def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size: float=0.1, shuffle=True) -> tuple:
     transform = Compose(
@@ -29,16 +29,7 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size:
 
     print("Done Loading Dataset.")
     
-    num_train = len(train_data)
-    indices = list(range(num_train))
-    split = int(np.floor(valid_size * num_train))
-
-    if shuffle:
-        np.random.seed(seed)
-        np.random.shuffle(indices)
-
-    train_idx, valid_idx = indices[split:], indices[:split]
-    train_sampler = SubsetRandomSampler(train_idx)
+    train_sampler = RandomSampler(train_data)
 
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=batch_size, sampler=train_sampler)
