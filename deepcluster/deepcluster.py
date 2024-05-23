@@ -207,7 +207,7 @@ class DeepCluster(BaseEstimator):
             aux = self.model(input).data.cpu().numpy()
             
             if i == 0:
-                features = np.zeros((len(data.sampler.indices), aux.shape[1]), dtype=np.float32)
+                features = np.zeros((len(data.dataset), aux.shape[1]), dtype=np.float32)
                 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
