@@ -91,7 +91,7 @@ class DeepCluster(BaseEstimator):
             
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            sampler = torch.utils.data.RandomSampler(data, num_samples=len(data.dataset))
+            sampler = torch.utils.data.RandomSampler(train_dataset)
             
             # Create Training Dataset
             train_data = torch.utils.data.DataLoader(
