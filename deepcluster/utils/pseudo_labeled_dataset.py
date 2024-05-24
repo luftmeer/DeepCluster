@@ -8,6 +8,7 @@ class PseudoLabeledData(data.Dataset):
     def __init__(self, image_idxs, pseudolabels, dataset, transform: torchvision.transforms.Compose) -> None:
         self.images = self.create_dataset(image_idxs, pseudolabels, dataset)
         self.transform = transform
+        self.targets = pseudolabels # For nmi calculation
         
     def create_dataset(self, image_idxs, pseudolabels, dataset) -> list:
         label_to_index = {label: idx for idx, label in enumerate(set(pseudolabels))}
