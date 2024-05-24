@@ -224,13 +224,16 @@ class DeepCluster(BaseEstimator):
             if len(self.cluster_logs) > 0:
                 if self.clustering_method == 'faiss':
                     nmi = normalized_mutual_info_score(clustering.images_list, self.cluster_logs[-1])
-                    self.cluster_logs.append(clustering.images_list)
                 elif self.clustering_method == 'sklearn':
                     nmi = normalized_mutual_info_score(images_list, self.cluster_logs[-1])
-                    self.cluster_logs.append(images_list)
 
                 print(f'NMI score: {nmi}')
 
+            if self.clustering_method == 'faiss':
+                self.cluster_logs.append(clustering.images_list)
+            elif self.clustering_method == 'sklearn':
+                self.cluster_logs.append(images_list)
+                
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
