@@ -15,6 +15,7 @@ from tqdm import tqdm
 import torch
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.metrics import normalized_mutual_info_score
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -96,6 +97,7 @@ class DeepCluster(BaseEstimator):
         self.checkpoint = checkpoint
         self.dataset_name = dataset_name
         self.start_epoch = 0 # Start epoch, necessary when resuming from previous checkpoint
+        self.cluster_logs = []
         
     def save_checkpoint(self, epoch: int):
         """Helper Function to contiously store a checkpoint of the current state of the CNN training
@@ -121,6 +123,7 @@ class DeepCluster(BaseEstimator):
             'optimizer': self.optimizer.state_dict(),
             'optimizer_tl': self.optimizer_tl.state_dict(),
             'loss': self.loss_criterion,
+            'cluster_logs': self.cluster_logs
         },
                    f'{BASE_CPT}/{self.dataset_name}/{self.model}.cpt')
         
@@ -136,7 +139,9 @@ class DeepCluster(BaseEstimator):
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.optimizer_tl.load_state_dict(checkpoint['optimizer_tl'])
+            self.cluster_logs = checkpoint['cluster_logs']
             print(f'Loaded checkpoint at epoch {self.start_epoch}')
+            del checkpoint
         else:
             print(f'No checkpoint found at {self.checkpoint}')
         
@@ -216,6 +221,17 @@ class DeepCluster(BaseEstimator):
             print(f'Classification Loss: {loss}')
             #print(f'Clustering Loss: {clustering_loss}')
 
+            try: # Calculate NMI score and store the clustering results
+                if self.clustering_method == 'faiss':
+                    nmi = normalized_mutual_info_score(clustering.images_list, self.cluster_logs[-1])
+                    self.cluster_logs.append(clustering.images_list)
+                elif self.clustering_method == 'sklearn':
+                    nmi = normalized_mutual_info_score(images_list, self.cluster_logs[-1])
+                    self.cluster_logs.append(images_list)
+                print(f'NMI score: {0:.3fnmi}')
+            except IndexError:
+                pass # First NMI can't be calculated
+            
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
