@@ -118,7 +118,7 @@ class DeepCluster(BaseEstimator):
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
-            'optimizer_tl': self.optimizer_tl,
+            'optimizer_tl': self.optimizer_tl.state_dict(),
             'loss': self.loss_criterion,
         },
                    f'{BASE_CPT}/{self.dataset_name}/{self.model}_epoch_{epoch}.cpt')
