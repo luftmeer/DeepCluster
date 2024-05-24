@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 import torch
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -32,7 +33,7 @@ class DeepCluster(BaseEstimator):
                 k: int=1000,
                 verbose: bool=False, # Verbose output while training
                 pca_reduction: int=256, # PCA reduction value for the amount of features to be kept
-                feature_computation: str='faiss',
+                clustering_method: str='faiss',
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -91,7 +92,7 @@ class DeepCluster(BaseEstimator):
         self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.feature_computation = feature_computation
+        self.clustering_method = clustering_method
         self.checkpoint = checkpoint
         self.dataset_name = dataset_name
         self.start_epoch = 0 # Start epoch, necessary when resuming from previous checkpoint
@@ -155,7 +156,11 @@ class DeepCluster(BaseEstimator):
         fd = int(self.model.top_layer.weight.size()[1])
         
         # Set KMeans Clustering
-        clustering = kmeans.KMeans(self.k)
+        if self.clustering_method == 'faiss':
+            clustering = kmeans.KMeans(self.k)
+        elif self.clustering_method == 'sklearn':
+            clustering = KMeans(n_clusters=self.k)
+        
         for epoch in range(self.start_epoch, self.epochs):
             if self.verbose: print(f'{"="*25} Epoch {epoch + 1} {"="*25}')
             
@@ -168,10 +173,21 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
             
             # Cluster features
-            clustering_loss = clustering.fit(features, self.pca)
-            
+            if self.clustering_method == 'faiss':
+                _ = clustering.fit(features, self.pca)
+            elif self.clustering_method == 'sklearn':
+                # PCA reduction
+                reduced_features = PCA(n_components=self.pca, whiten=True).fit_transform(features)
+                labels = clustering.fit_predict(reduced_features)
+                images_list = [[] for i in range(self.k)]
+                for i in range(len(features)):
+                    images_list[labels[i]].append(i)
+                
             # Assign Pseudo-Labels
-            train_dataset = clustering.cluster_assign(clustering.images_list, data.dataset, self.cluster_assign_transform)
+            if self.clustering_method == 'faiss':
+                train_dataset = clustering.cluster_assign(clustering.images_list, data.dataset, self.cluster_assign_transform)
+            elif self.clustering_method == 'sklearn':
+                train_dataset = kmeans.KMeans.cluster_assign(images_list, data.dataset, self.cluster_assign_transform)
             
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling

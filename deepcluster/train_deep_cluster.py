@@ -107,7 +107,8 @@ def main():
         pca_reduction=3,
         cluster_assign_tf=ca_tf,
         epochs=3,
-        dataset_name='CIFAR10'
+        dataset_name='CIFAR10',
+        clustering_method='sklearn'
     )
 
     #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
