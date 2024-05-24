@@ -1,0 +1,12 @@
+# Python specific outputs
+__pycache__/
+
+# Jupyter Notebook
+notebooks/
+
+# pytest
+.coverage
+
+# Folders to ignore
+data/ 
+checkpoints/
