@@ -16,6 +16,7 @@ import torch
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import normalized_mutual_info_score
+from sklearn.preprocessing import MultiLabelBinarizer
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -222,10 +223,11 @@ class DeepCluster(BaseEstimator):
             #print(f'Clustering Loss: {clustering_loss}')
 
             if len(self.cluster_logs) > 0:
+                mlb = MultiLabelBinarizer
                 if self.clustering_method == 'faiss':
-                    nmi = normalized_mutual_info_score(clustering.images_list, self.cluster_logs[-1])
+                    nmi = normalized_mutual_info_score(mlb.fit_transform(clustering.images_list), mlb.fit_transform(self.cluster_logs[-1]))
                 elif self.clustering_method == 'sklearn':
-                    nmi = normalized_mutual_info_score(images_list, self.cluster_logs[-1])
+                    nmi = normalized_mutual_info_score(mlb.fit_transform(images_list), mlb.fit_transform(self.cluster_logs[-1]))
 
                 print(f'NMI score: {nmi}')
 
