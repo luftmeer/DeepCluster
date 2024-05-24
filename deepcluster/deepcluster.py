@@ -1,6 +1,5 @@
 import torch.utils
 import torch.utils.data
-#from deepcluster.AlexNet import AlexNet
 from torchvision import transforms
 from torch import optim
 from torch import nn
@@ -8,7 +7,6 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-import faiss
 from utils import kmeans
 import os
 from sklearn.metrics import normalized_mutual_info_score
@@ -25,12 +23,61 @@ class DeepCluster(BaseEstimator):
                 optim_tl: optim.Optimizer, # Optimizer for the Top Layer Parameters
                 loss_criterion: object, # PyTorch Loss Function
                 cluster_assign_tf: transforms,
+                dataset_name: str, # Name of the dataset when saving checkpoints
+                checkpoint: str, # Direct path to the checkpoint
                 epochs: int=500, # Training Epoch
                 batch_size: int=256,
                 k: int=1000,
                 verbose: bool=False, # Verbose output while training
                 pca_reduction: int=256, # PCA reduction value for the amount of features to be kept
+                feature_computation: str='faiss',
                 ):
+        """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
+
+        Parameters
+        ----------
+        model: nn.Module,
+            Convolutional Neural Network Model which is used for training.
+
+        optim: optim.Optimizer,
+            The used optimizer for the full Model.
+
+        optim_tl: optim.Optimizer,
+            The used optimizer which is only used to optimize the top layer of the CNN.
+
+        loss_criterion: object,
+            Loss function for the model.
+
+        cluster_assign_tf: transforms,
+            Transform object for the created dataset containing the original data points which are then merged with the computated features.
+
+        dataset_name: str,
+            A simple name of the dataset which is used to define the filename as well as the folder name for the checkpoints.
+
+        checkpoint: str,
+            The folder path to a checkpoint. If this is set, the Algorithm will load the information from the given filepath and use them to continue the training from that state.
+
+        epochs: int, default=500,
+            How many epochs are done for the training.
+
+        batch_size: int, default=256,
+            Size of the batches which is necessary for creating the new dataset as well as for the feature calculation itself.
+
+        k: int, default=1000,
+            Cluster amount for the k-Means algorithm.
+
+        verbose: bool, default=False,
+            If certain outputs should be printed or not.
+
+        pca_reduction: int, default=256,
+            Defines to how many features the dataset is reduced by the PCA algorithm of choice.
+
+        feature_computation: str, default='faiss',
+            Which method should be used to calculate the features.
+
+            faiss: Uses the implementation by Facebook AI Research which is also used by the authors, especially the k-Means algorithm.
+            sklearn: Uses the PCA and k-Means implementation by scikit-learn.
+        """
         self.model = model
         #self.data = data
         self.optimizer = optim
