@@ -221,17 +221,16 @@ class DeepCluster(BaseEstimator):
             print(f'Classification Loss: {loss}')
             #print(f'Clustering Loss: {clustering_loss}')
 
-            try: # Calculate NMI score and store the clustering results
+            if len(self.cluster_logs) > 0:
                 if self.clustering_method == 'faiss':
                     nmi = normalized_mutual_info_score(clustering.images_list, self.cluster_logs[-1])
                     self.cluster_logs.append(clustering.images_list)
                 elif self.clustering_method == 'sklearn':
                     nmi = normalized_mutual_info_score(images_list, self.cluster_logs[-1])
                     self.cluster_logs.append(images_list)
-                print(f'NMI score: {0:.3fnmi}')
-            except IndexError:
-                pass # First NMI can't be calculated
-            
+
+                print(f'NMI score: {nmi}')
+
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
