@@ -7,4 +7,6 @@ notebooks/
 # pytest
 .coverage
 
-data/
+# Folders to ignore
+data/ 
+checkpoints/

@@ -15,16 +15,18 @@ from tqdm import tqdm
 import torch
 from sklearn.cluster import KMeans
 
+# Base folder for checkpoints
+BASE_CPT = './checkpoints/'
+
 class DeepCluster(BaseEstimator):
     def __init__(self,
                 model: nn.Module, # CNN Model
-                #data: data.DataLoader, # Normalized Dataset
                 optim: optim.Optimizer, # Optimizer for the parameters of the model
                 optim_tl: optim.Optimizer, # Optimizer for the Top Layer Parameters
                 loss_criterion: object, # PyTorch Loss Function
                 cluster_assign_tf: transforms,
                 dataset_name: str, # Name of the dataset when saving checkpoints
-                checkpoint: str, # Direct path to the checkpoint
+                checkpoint: str=None, # Direct path to the checkpoint
                 epochs: int=500, # Training Epoch
                 batch_size: int=256,
                 k: int=1000,
@@ -32,54 +34,53 @@ class DeepCluster(BaseEstimator):
                 pca_reduction: int=256, # PCA reduction value for the amount of features to be kept
                 feature_computation: str='faiss',
                 ):
-        """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
+        """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
         Parameters
         ----------
         model: nn.Module,
             Convolutional Neural Network Model which is used for training.
-
+        
         optim: optim.Optimizer,
             The used optimizer for the full Model.
-
+            
         optim_tl: optim.Optimizer,
             The used optimizer which is only used to optimize the top layer of the CNN.
-
+            
         loss_criterion: object,
             Loss function for the model.
-
+        
         cluster_assign_tf: transforms,
             Transform object for the created dataset containing the original data points which are then merged with the computated features.
-
+        
         dataset_name: str,
             A simple name of the dataset which is used to define the filename as well as the folder name for the checkpoints.
-
+        
         checkpoint: str,
             The folder path to a checkpoint. If this is set, the Algorithm will load the information from the given filepath and use them to continue the training from that state.
-
+        
         epochs: int, default=500,
             How many epochs are done for the training.
-
+        
         batch_size: int, default=256,
             Size of the batches which is necessary for creating the new dataset as well as for the feature calculation itself.
-
+            
         k: int, default=1000,
             Cluster amount for the k-Means algorithm.
-
+        
         verbose: bool, default=False,
             If certain outputs should be printed or not.
-
+        
         pca_reduction: int, default=256,
             Defines to how many features the dataset is reduced by the PCA algorithm of choice.
-
+            
         feature_computation: str, default='faiss',
             Which method should be used to calculate the features.
-
+            
             faiss: Uses the implementation by Facebook AI Research which is also used by the authors, especially the k-Means algorithm.
             sklearn: Uses the PCA and k-Means implementation by scikit-learn.
         """
         self.model = model
-        #self.data = data
         self.optimizer = optim
         self.optimizer_tl = optim_tl
         self.loss_criterion = loss_criterion
@@ -90,36 +91,72 @@ class DeepCluster(BaseEstimator):
         self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.feature_computation = feature_computation
+        self.checkpoint = checkpoint
+        self.dataset_name = dataset_name
+        self.start_epoch = 0 # Start epoch, necessary when resuming from previous checkpoint
         
-    def save_checkpoint(self) -> bool:
+    def save_checkpoint(self, epoch: int):
         """Helper Function to contiously store a checkpoint of the current state of the CNN training
 
-        Returns
-        -------
-            bool: If storing was successful or not.
+        Parameters
+        ----------
+        epoch: int,
+            The current epoch at which the checkpoint is created at.
         """
-        pass
+        # Create checkpoint folder if it doesn't exist yet
+        if not os.path.exists(BASE_CPT):
+            os.makedirs(BASE_CPT)
+            
+        # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
+        if not os.path.exists(BASE_CPT + '/' + self.dataset_name + '/'):
+            os.makedirs(BASE_CPT + '/' + self.dataset_name + '/')
+            
+        # Store checkpoint
+        if self.verbose: print(f'Saving the current checkpoint at epoch {epoch}..')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+            'optimizer_tl': self.optimizer_tl,
+            'loss': self.loss_criterion,
+        },
+                   f'{BASE_CPT}/{self.dataset_name}/{self.model}_epoch_{epoch}.cpt')
+        
+        return
     
     def load_checkpoint(self):
         """Helper Function to load the latest checkpoint of a model training.
-        
-        Returns
-        -------
-            #TODO tbd
         """
-        pass
+        if os.path.isfile(self.checkpoint):
+            print(f'Loading checkpoint file \'{self.checkpoint}\'')
+            checkpoint = torch.load(self.checkpoint)
+            self.start_epoch = checkpoint['epoch']
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.optimizer_tl.load_state_dict(checkpoint['optimizer_tl'])
+            print(f'Loaded checkpoint at epoch {self.start_epoch}')
+        else:
+            print(f'No checkpoint found at {self.checkpoint}')
+        
+        return
     
     def fit(self, data: data.DataLoader, remove_tl: bool=False):
         #TODO: Load Checkpoint implementation
         
         self.model.features = torch.nn.DataParallel(self.model.features)
         self.model.to(self.device)
+        
+        # Checkpoint file path given, load checkpoint
+        if self.checkpoint:
+            self.load_checkpoint()
+        
         cudnn.benchmark = True
         fd = int(self.model.top_layer.weight.size()[1])
         
         # Set KMeans Clustering
         clustering = kmeans.KMeans(self.k)
-        for epoch in range(self.epochs):
+        for epoch in range(self.start_epoch, self.epochs):
             if self.verbose: print(f'{"="*25} Epoch {epoch + 1} {"="*25}')
             
             if remove_tl:
@@ -161,8 +198,12 @@ class DeepCluster(BaseEstimator):
             loss = self.train(train_data)
             
             print(f'Classification Loss: {loss}')
-            print(f'Clustering Loss: {clustering_loss}')
+            #print(f'Clustering Loss: {clustering_loss}')
 
+            if self.verbose: print('Creating new checkpoint..')
+            self.save_checkpoint(epoch)
+            if self.verbose: print('Finished storing checkpoint')
+            
     def predict(self):
         pass
     
