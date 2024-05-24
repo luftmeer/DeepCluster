@@ -1,4 +1,4 @@
-from AlexNet import AlexNet
+from models.AlexNet import AlexNet
 from deepcluster import DeepCluster
 from utils.kmeans import KMeans
 

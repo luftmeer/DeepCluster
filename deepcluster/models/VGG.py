@@ -125,3 +125,9 @@ class VGG16(nn.Module):
         if self.top_layer:
             X = self.top_layer(X)
         return X
+    
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+    def __repr__(self) -> str:
+        return 'VGG16'
