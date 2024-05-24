@@ -113,15 +113,15 @@ class DeepCluster(BaseEstimator):
             os.makedirs(BASE_CPT + '/' + self.dataset_name + '/')
             
         # Store checkpoint
-        if self.verbose: print(f'Saving the current checkpoint at epoch {epoch}..')
+        if self.verbose: print(f'Saving the current checkpoint at epoch {epoch+1}..')
         torch.save({
-            'epoch': epoch,
+            'epoch': epoch+1, # +1 since, when starting again, the algorithm should continue with the next epoch and not 'redo' this one
             'model_state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'optimizer_tl': self.optimizer_tl.state_dict(),
             'loss': self.loss_criterion,
         },
-                   f'{BASE_CPT}/{self.dataset_name}/{self.model}_epoch_{epoch}.cpt')
+                   f'{BASE_CPT}/{self.dataset_name}/{self.model}.cpt')
         
         return
     
