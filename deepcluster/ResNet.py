@@ -157,3 +157,4 @@ if __name__ == "__main__":
 
     model = resnet50()  # Error
     summary(model, in_shape)
+
