@@ -2,11 +2,8 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from torchsummary import summary
-
 
 class BasicBlock(nn.Module):
-
     expansion: int = 1
 
     def __init__(self, in_channel, out_channel, stride=1, downsample=None):
@@ -26,7 +23,7 @@ class BasicBlock(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         identity = x
         if self.downsample is not None:
-            identity += self.downsample(identity)
+            identity = self.downsample(x)
 
         out = self.conv1(x)
         out = self.conv2(out)
@@ -36,7 +33,6 @@ class BasicBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
-
     expansion: int = 4
 
     def __init__(self, in_channel, out_channel, stride=1, downsample=None):
@@ -90,7 +86,6 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.linear = nn.Linear(in_features=512, out_features=num_classes)
 
-    ## TODO:
     def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1) -> nn.Module:
         layers = []
         downsample = None
@@ -130,7 +125,6 @@ class ResNet(nn.Module):
         return out
 
 
-
 def resnet18():
     return ResNet(BasicBlock, (2, 2, 2, 2))
 
@@ -149,12 +143,3 @@ def resnet101():
 
 def resnet152():
     return ResNet(Bottleneck, (3, 8, 36, 3))
-
-
-if __name__ == "__main__":
-
-    in_shape = (3, 224, 224)
-
-    model = resnet50()  # Error
-    summary(model, in_shape)
-
