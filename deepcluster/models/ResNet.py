@@ -84,7 +84,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, n_blocks[3], 2)
 
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.linear = nn.Linear(in_features=512, out_features=num_classes)
+        self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
 
     def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1) -> nn.Module:
         layers = []
@@ -120,7 +120,7 @@ class ResNet(nn.Module):
 
         out = self.avgpool(out)
         out = out.view(out.size(0), -1)
-        out = self.linear(out)
+        out = self.top_layer(out)
 
         return out
 
