@@ -11,6 +11,7 @@ from utils import kmeans
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
+import collections
 
 import torch
 from sklearn.cluster import KMeans
@@ -233,6 +234,12 @@ class DeepCluster(BaseEstimator):
                 print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
             
             print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
+            print('-'*50)
+            
+            print('Label occurences:')
+            print(f'- True labels: {dict(sorted(collections.Counter(data.dataset.targets).items()))}')
+            print(f'- Computed labels: {dict(sorted(collections.Counter(train_data.dataset.targets).items()))}')
+            
             print('-'*50)
             
             if self.clustering_method == 'faiss':
