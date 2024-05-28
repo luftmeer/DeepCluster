@@ -215,7 +215,7 @@ class DeepCluster(BaseEstimator):
             classifiers = list(self.model.classifier.children())
             classifiers.append(nn.ReLU(inplace=True).to(self.device))
             self.model.classifier = nn.Sequential(*classifiers)
-            self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
+            self.model.top_layer = nn.Linear(fd, self.k)
             self.model.top_layer.weight.data.normal_(0, 0.01)
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
