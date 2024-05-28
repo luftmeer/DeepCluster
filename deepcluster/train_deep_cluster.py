@@ -9,23 +9,41 @@ import faiss
 import numpy as np
 from torch.utils.data.sampler import RandomSampler
 
-def train_validation_data(data_dir: str, batch_size: int, seed: int, valid_size: float=0.1, shuffle=True) -> tuple:
-    transform = Compose(
-            [
-                Resize(256),
-                CenterCrop(224),
-                ToTensor(),
-                Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                )
-            ]
-        )
+def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: str='CIFAR10', valid_size: float=0.1, shuffle=True) -> tuple:
     print("Loading Dataset...")
-    train_data = torchvision.datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=transform,
-    )
+    if dataset == 'CIFAR10':
+        transform = Compose(
+                [
+                    Resize(256),
+                    CenterCrop(224),
+                    ToTensor(),
+                    Normalize(
+                        mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]
+                    )
+                ]
+            )
+        
+        train_data = torchvision.datasets.CIFAR10(
+            root=data_dir, train=True,
+            download=True, transform=transform,
+        )
+    elif dataset == 'MNIST':
+        transform = Compose(
+                [
+                    Resize(256),
+                    CenterCrop(224),
+                    ToTensor(),
+                    Normalize(
+                        (0.1307,), (0.3081,)
+                    )
+                ]
+            )
+        
+        train_data = torchvision.datasets.MNIST(
+            root=data_dir, train=True,
+            download=True, transform=transform,
+        )
 
     print("Done Loading Dataset.")
     
@@ -53,11 +71,11 @@ def main():
         )
     )
     print("Done Loading Dataset.") """
-
+    dataset_name = 'MNIST'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
     
-    model = AlexNet(input_dim=2, num_classes=10, sobel=True).to(device)
+    model = AlexNet(input_dim=1, num_classes=10, sobel=False).to(device)
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
     # Optimizer
@@ -80,10 +98,15 @@ def main():
     loss = torch.nn.CrossEntropyLoss()
 
     # Cluster Assign Transformation
-    normalize = Normalize(
-        mean=[0.4914, 0.4822, 0.4465],
-        std=[0.2023, 0.1994, 0.2010]
-    )
+    if dataset_name == 'CIFAR10':
+        normalize = Normalize(
+            mean=[0.4914, 0.4822, 0.4465],
+            std=[0.2023, 0.1994, 0.2010]
+        )
+    elif dataset_name == 'MNIST':
+        normalize = Normalize(
+            (0.1307,), (0.3081,)
+        )
 
     ca_tf = Compose(
         [
@@ -107,13 +130,13 @@ def main():
         pca_reduction=3,
         cluster_assign_tf=ca_tf,
         epochs=3,
-        dataset_name='CIFAR10',
+        dataset_name=dataset_name,
         clustering_method='sklearn'
     )
 
     #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, dataset='MNIST', seed=1)
     
     print("Starting Training...")
     DC_model.fit(train_loader)

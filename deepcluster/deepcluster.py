@@ -11,6 +11,7 @@ from utils import kmeans
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
+import collections
 
 import torch
 from sklearn.cluster import KMeans
@@ -152,9 +153,7 @@ class DeepCluster(BaseEstimator):
 
         return
 
-    def fit(self, data: data.DataLoader, remove_tl: bool = False):
-        # TODO: Load Checkpoint implementation
-
+    def fit(self, data: data.DataLoader):
         self.model.features = torch.nn.DataParallel(self.model.features)
         self.model.to(self.device)
 
@@ -174,10 +173,10 @@ class DeepCluster(BaseEstimator):
         for epoch in range(self.start_epoch, self.epochs):
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
-            if remove_tl:
-                # Remove head
-                self.model.top_layer = None
-                self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
+            
+            # Remove head
+            self.model.top_layer = None
+            self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
 
             # Compute Features
             features = self.compute_features(data)
@@ -212,29 +211,37 @@ class DeepCluster(BaseEstimator):
                 pin_memory=True,
             )
 
-            if remove_tl:
-                # Add Top Layer
-                classifiers = list(self.model.classifier.children())
-                classifiers.append(nn.ReLU(inplace=True).to(self.device))
-                self.model.classifier = nn.Sequential(*classifiers)
-                self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
-                self.model.top_layer.weight.data.normal_(0, 0.01)
-                self.model.top_layer.bias.data.zero_()
-                self.model.top_layer.to(self.device)
+            # Add Top Layer
+            classifiers = list(self.model.classifier.children())
+            classifiers.append(nn.ReLU(inplace=True).to(self.device))
+            self.model.classifier = nn.Sequential(*classifiers)
+            self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
+            self.model.top_layer.weight.data.normal_(0, 0.01)
+            self.model.top_layer.bias.data.zero_()
+            self.model.top_layer.to(self.device)
 
             loss = self.train(train_data)
 
             print(f'Classification Loss: {loss}')
             # print(f'Clustering Loss: {clustering_loss}')
 
+            print('-'*50)
+            print('Normalized Mutual Information Scores:')
             if len(self.cluster_logs) > 0:
-                if self.clustering_method == 'faiss':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
-                elif self.clustering_method == 'sklearn':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
+                nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
 
-                print(f'NMI score: {nmi}')
-
+                print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+            
+            print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
+            print('-'*50)
+            
+            print('Label occurences:')
+            true_labels, count = torch.unique(data.dataset.targets, return_counts=True)
+            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
+            print(f'- Computed labels: {dict(sorted(collections.Counter(train_data.dataset.targets).items()))}')
+            
+            print('-'*50)
+            
             if self.clustering_method == 'faiss':
                 self.cluster_logs.append(train_data.dataset.targets)
             elif self.clustering_method == 'sklearn':
@@ -340,6 +347,7 @@ class DeepCluster(BaseEstimator):
         -------
         np.ndarray: Predicted features.
         """
+        self.model.eval()
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
