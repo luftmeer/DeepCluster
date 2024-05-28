@@ -58,6 +58,7 @@ class AlexNet(nn.Module):
         self.top_layer = nn.Linear(4096, num_classes)
         
         # Define Sobel Filter
+        self.sobel = None
         if sobel:
             grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
             grayscale.weight.data.fill_(1.0 / 3.0)
@@ -69,7 +70,7 @@ class AlexNet(nn.Module):
             self.sobel = nn.Sequential(grayscale, filter)
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
-                
+
     def forward(self, X: torch.Tensor):
             if self.sobel:
                 X = self.sobel(X)

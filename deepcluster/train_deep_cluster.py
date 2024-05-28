@@ -75,7 +75,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
     
-    model = AlexNet(input_dim=2, num_classes=10, sobel=True).to(device)
+    model = AlexNet(input_dim=1, num_classes=10, sobel=False).to(device)
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
     # Optimizer
@@ -136,7 +136,7 @@ def main():
 
     #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, dataset='MNIST', seed=1)
     
     print("Starting Training...")
     DC_model.fit(train_loader)
