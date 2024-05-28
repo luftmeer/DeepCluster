@@ -153,8 +153,6 @@ class DeepCluster(BaseEstimator):
         return
 
     def fit(self, data: data.DataLoader, remove_tl: bool = False):
-        # TODO: Load Checkpoint implementation
-
         self.model.features = torch.nn.DataParallel(self.model.features)
         self.model.to(self.device)
 
@@ -228,10 +226,7 @@ class DeepCluster(BaseEstimator):
             # print(f'Clustering Loss: {clustering_loss}')
 
             if len(self.cluster_logs) > 0:
-                if self.clustering_method == 'faiss':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
-                elif self.clustering_method == 'sklearn':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
+                nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
 
                 print(f'NMI score: {nmi}')
 
