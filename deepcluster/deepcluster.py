@@ -153,7 +153,7 @@ class DeepCluster(BaseEstimator):
 
         return
 
-    def fit(self, data: data.DataLoader, remove_tl: bool = False):
+    def fit(self, data: data.DataLoader):
         self.model.features = torch.nn.DataParallel(self.model.features)
         self.model.to(self.device)
 
@@ -173,10 +173,10 @@ class DeepCluster(BaseEstimator):
         for epoch in range(self.start_epoch, self.epochs):
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
-            if remove_tl:
-                # Remove head
-                self.model.top_layer = None
-                self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
+            
+            # Remove head
+            self.model.top_layer = None
+            self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
 
             # Compute Features
             features = self.compute_features(data)
@@ -211,15 +211,14 @@ class DeepCluster(BaseEstimator):
                 pin_memory=True,
             )
 
-            if remove_tl:
-                # Add Top Layer
-                classifiers = list(self.model.classifier.children())
-                classifiers.append(nn.ReLU(inplace=True).to(self.device))
-                self.model.classifier = nn.Sequential(*classifiers)
-                self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
-                self.model.top_layer.weight.data.normal_(0, 0.01)
-                self.model.top_layer.bias.data.zero_()
-                self.model.top_layer.to(self.device)
+            # Add Top Layer
+            classifiers = list(self.model.classifier.children())
+            classifiers.append(nn.ReLU(inplace=True).to(self.device))
+            self.model.classifier = nn.Sequential(*classifiers)
+            self.model.top_layer = nn.Linear(fd, len(clustering.images_list))
+            self.model.top_layer.weight.data.normal_(0, 0.01)
+            self.model.top_layer.bias.data.zero_()
+            self.model.top_layer.to(self.device)
 
             loss = self.train(train_data)
 
