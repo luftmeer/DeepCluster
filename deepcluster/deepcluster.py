@@ -232,7 +232,7 @@ class DeepCluster(BaseEstimator):
 
                 print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
             
-            print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.targets)}')
+            print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
             print('-'*50)
             
             if self.clustering_method == 'faiss':
