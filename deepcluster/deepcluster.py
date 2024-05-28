@@ -237,7 +237,8 @@ class DeepCluster(BaseEstimator):
             print('-'*50)
             
             print('Label occurences:')
-            print(f'- True labels: {dict(sorted(collections.Counter(data.dataset.targets).items()))}')
+            true_labels, count = torch.unique(data.dataset.targets, return_counts=True)
+            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
             print(f'- Computed labels: {dict(sorted(collections.Counter(train_data.dataset.targets).items()))}')
             
             print('-'*50)
@@ -347,6 +348,7 @@ class DeepCluster(BaseEstimator):
         -------
         np.ndarray: Predicted features.
         """
+        self.model.eval()
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
