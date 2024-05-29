@@ -43,6 +43,7 @@ class DeepCluster(BaseEstimator):
                 pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
                 clustering_method: str = 'faiss',
                 pca_method: str = 'faiss',
+                pca_whitening: bool = True
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -97,6 +98,9 @@ class DeepCluster(BaseEstimator):
             sklearn: Uses the PCA reduction method implemented in the scikit-learn library.
             
             Both methods automatically whiten the features.
+            
+        pca_whitening: bool, default=True,
+            If set to True, the PCA reduction method will whiten the reduced dataset.
         """
         self.model = model
         self.optimizer = optim
@@ -115,6 +119,7 @@ class DeepCluster(BaseEstimator):
         self.dataset_name = dataset_name
         self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
         self.cluster_logs = []
+        self.pca_whitening = pca_whitening
         
         # Set clustering algorithm
         if self.clustering_method == 'faiss':
@@ -395,13 +400,17 @@ class DeepCluster(BaseEstimator):
             features = features.astype(np.float32)
             
             # PCA transformation + whitening
-            mat = faiss.PCAMatrix(dim, self.pca, eigen_pwer=-0.5)
+            if self.pca_whitening:
+                whitening_value = -0.5
+            else:
+                whitening_value = 0.0
+            mat = faiss.PCAMatrix(dim, self.pca, eigen_pwer=whitening_value)
             mat.train(features)
             assert mat.is_trained
             features = mat.apply(features)
             
         elif self.pca_method == 'sklearn':
-            features = PCA(n_components=self.pca, whiten=True).fit_transform(features)
+            features = PCA(n_components=self.pca, whiten=self.pca_whitening).fit_transform(features)
 
         # L2-normalization
         rows = np.linalg.norm(features, axis=1)
