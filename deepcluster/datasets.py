@@ -49,3 +49,5 @@ class ImageNetDataset(Dataset):
 
 if __name__ == "__main__":
     dataset = ImageNetDataset(info=True)
+    img = dataset[0]
+
