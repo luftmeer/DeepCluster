@@ -276,8 +276,9 @@ class DeepCluster(BaseEstimator):
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
-            if self.device.type == 'cuda':
-                input, target = input.cuda(), target.cuda()
+            # Recasting target as LongTensor
+            target = target.type(torch.LongTensor)
+            input, target = input.to(self.device), target.to(self.device)
             input.requires_grad = True
 
             # Forward pass
