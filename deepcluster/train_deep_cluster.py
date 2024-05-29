@@ -117,6 +117,8 @@ def main():
     
     print("Starting Training...")
     DC_model.fit(train_loader)
+    print("after fitting")
+    print(DC_model.train_losses)
     print("Training Done.")
 
 if __name__ == '__main__':
