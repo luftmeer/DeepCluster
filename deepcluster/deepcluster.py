@@ -371,7 +371,7 @@ class DeepCluster(BaseEstimator):
                 whitening_value = -0.5
             else:
                 whitening_value = 0.0
-            mat = faiss.PCAMatrix(dim, self.pca, eigen_pwer=whitening_value)
+            mat = faiss.PCAMatrix(dim, self.pca, eigen_power=whitening_value)
             mat.train(features)
             assert mat.is_trained
             features = mat.apply(features)
