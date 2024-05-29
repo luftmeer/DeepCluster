@@ -5,7 +5,7 @@ from .pseudo_labeled_dataset import PseudoLabeledData
 from torchvision.transforms import Compose
 import torch
 
-class KMeans():
+class FaissKMeans():
     def __init__(self, k: int):
         """Wrapper for the Facebook AI Research Implementation for a KMeans algorithm optimized for GPUs.
 
@@ -73,23 +73,3 @@ class KMeans():
         _, I = index.search(data, 1)
         
         return [int(n[0]) for n in I]
-    
-    @staticmethod
-    def cluster_assign(image_list: list, data: data.Dataset, transform: Compose) -> PseudoLabeledData:
-        """_summary_
-
-        Args:
-            image_list (list): _description_
-            data (data.Dataset): _description_
-            transform (Compose): _description_
-
-        Returns:
-            PseudoLabeledData: _description_
-        """
-        pseudolabels = []
-        image_indexes = []
-        for cluster, images in enumerate(image_list):
-            image_indexes.extend(images)
-            pseudolabels.extend([cluster] * len(images))
-            
-        return PseudoLabeledData(image_indexes, pseudolabels, data, transform)

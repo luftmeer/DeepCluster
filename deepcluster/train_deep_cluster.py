@@ -1,6 +1,6 @@
 from models.AlexNet import AlexNet
 from deepcluster import DeepCluster
-from utils.kmeans import KMeans
+from utils.faiss_kmeans import FaissKMeans
 
 import torch
 import torchvision
