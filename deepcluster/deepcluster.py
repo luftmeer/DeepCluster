@@ -231,32 +231,13 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            loss = self.train(train_data)
-
-            print(f'Classification Loss: {loss}')
-            # print(f'Clustering Loss: {clustering_loss}')
-
-            print('-'*50)
-            print('Normalized Mutual Information Scores:')
-            if len(self.cluster_logs) > 0:
-                nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
-
-                print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+            losses, accuracies = self.train(train_data)
             
-            print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
-            print('-'*50)
+            # Print the results of this epoch
+            self.print_results(epoch, losses, accuracies, train_data.dataset.targets, data.dataset.targets)
             
-            print('Label occurences:')
-            true_labels, count = torch.unique(data.dataset.targets, return_counts=True)
-            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
-            print(f'- Computed labels: {dict(sorted(collections.Counter(train_data.dataset.targets).items()))}')
-            
-            print('-'*50)
-            
-            if self.clustering_method == 'faiss':
-                self.cluster_logs.append(train_data.dataset.targets)
-            elif self.clustering_method == 'sklearn':
-                self.cluster_logs.append(train_data.dataset.targets)
+            # Store psuedo-labels
+            self.cluster_logs.append(train_data.dataset.targets)
 
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
@@ -277,7 +258,7 @@ class DeepCluster(BaseEstimator):
         return pred_idx
 
 
-    def train(self, train_data: data.DataLoader) -> float:
+    def train(self, train_data: data.DataLoader) -> tuple:
         """Training method for each epoch using the training dataset.
 
         Parameters
@@ -294,7 +275,6 @@ class DeepCluster(BaseEstimator):
 
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        different_classes = set()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             if self.device.type == 'cuda':
                 input, target = input.cuda(), target.cuda()
@@ -320,9 +300,6 @@ class DeepCluster(BaseEstimator):
             _, predicted = output.max(1)
             accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
 
-            # add the different classes to the set
-            different_classes.update(target.cpu().numpy())
-
             # Backward pass and optimize
             self.optimizer.zero_grad()
             self.optimizer_tl.zero_grad()
@@ -334,17 +311,7 @@ class DeepCluster(BaseEstimator):
             del input, target, output, loss
             torch.cuda.empty_cache()
 
-        print("-" * 20, "Results", "-" * 20)
-        print("These are the losses")
-        print(losses)
-        print("-" * 50)
-        print("This is the accuracy")
-        print(torch.mean(accuracies))
-        print("-" * 50)
-        print("These are the different classes")
-        print(different_classes)
-        print("-" * 50)
-        return torch.mean(losses)
+        return losses, accuracies
 
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
@@ -451,3 +418,44 @@ class DeepCluster(BaseEstimator):
         Dataset which contains both the original data points with their obtained labels from the feature clustering.
         """
         return PseudoLabeledData(labels, dataset, transform)
+    
+    def print_results(self, epoch: int, losses: torch.Tensor, accuracies: torch.Tensor, pseudo_labels: list, dataset_labels: np.ndarray):
+        """Function for better overview when printing epoch results after the training process has been completed.
+
+        Parameters
+        epoch: int,
+            Current epoch.
+            
+        losses: torch.Tensor,
+            Each loss after the training.
+        
+        accuracies: torch.Tensor,
+            Accuracies when comparing the pseudo-labels and the resulting output when training.
+        
+        pseudo_labels: list,
+            Pseudo-Labels of the training dataset.
+            
+        dataset_labels: np.ndarray,
+            The actual labels of the dataset.
+        """
+    
+        print("-" * 20, "Results", "-" * 20)
+        print(f"Average loss: {torch.mean(losses)}")
+        print(f"Accuracy: {torch.mean(accuracies)}")
+        print("-" * 50)
+
+        print('Normalized Mutual Information Scores:')
+        if len(self.cluster_logs) > 0:
+            nmi = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
+
+            print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+        
+        print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(dataset_labels, pseudo_labels)}')
+        print('-'*50)
+        
+        print('Label occurences:')
+        true_labels, count = torch.unique(dataset_labels, return_counts=True)
+        print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
+        print(f'- Computed labels: {dict(sorted(collections.Counter(pseudo_labels).items()))}')
+        
+        print('-'*50)
