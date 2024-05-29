@@ -11,7 +11,7 @@ class PseudoLabeledData(data.Dataset):
         self.transform = transform
         self.targets = pseudolabels # For nmi calculation
         
-    def create_dataset(self, pseudolabels:list , dataset: torch.utils.data.DataSet) -> list:
+    def create_dataset(self, pseudolabels:list , dataset: torch.utils.data.Dataset) -> list:
         """Creates a new dataset of existing data inputs and newly computated features.
 
         Parameters
@@ -19,7 +19,7 @@ class PseudoLabeledData(data.Dataset):
         pseudolabels: list
             Clustered feature labels.
             
-        dataset: torch.utils.data.DataSet
+        dataset: torch.utils.data.Dataset
             Original data points where the new labels are added to.
 
         Returns

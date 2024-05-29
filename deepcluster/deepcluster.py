@@ -405,7 +405,7 @@ class DeepCluster(BaseEstimator):
         
         return labels
         
-    def create_pseudo_labeled_dataset(self, dataset: data.DataSet, labels: list, transform: transforms) -> data.DataSet:
+    def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
 
         Parameters
