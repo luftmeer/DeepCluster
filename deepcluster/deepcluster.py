@@ -232,11 +232,8 @@ class DeepCluster(BaseEstimator):
             print('-'*50)
             print('Normalized Mutual Information Scores:')
             if len(self.cluster_logs) > 0:
-                if self.clustering_method == 'faiss':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
-                elif self.clustering_method == 'sklearn':
-                    nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
                 nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
+
                 print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
 
             print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
