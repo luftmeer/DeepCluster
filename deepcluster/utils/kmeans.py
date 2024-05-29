@@ -16,7 +16,7 @@ class KMeans():
         """
         self.k = k
         
-    def fit(self, data: np.ndarray, pca: int=256) -> float:
+    def fit(self, data: np.ndarray) -> np.ndarray:
         """Performs KMeans Clustering based on Facebooks AI Research Method
 
         Args:
@@ -25,43 +25,11 @@ class KMeans():
         Returns:
             float: _description_
         """
-        # PCA-reducting, whitening and L2-normalization
-        xb = self.preprocess_features(data, pca)
-        
         # Clustering
-        I, loss = self.run_kmeans(xb, self.k)
-        self.images_list = [[] for i in range(self.k)]
+        labels = self.run_kmeans(data, self.k)
         
-        for i in range(len(data)):
-            self.images_list[I[i]].append(i)
             
-        return loss
-    
-    @staticmethod
-    def preprocess_features(data: np.ndarray, pca: int=256) -> np.ndarray:
-        """Preprocess an array of features.
-
-        Args:
-            data (np.ndarray): _description_
-            pca (int, optional): _description_. Defaults to 256.
-
-        Returns:
-            np.ndarray: _description_
-        """
-        _, dim = data.shape
-        data = data.astype(np.float32)
-        
-        # PCA-Whitening with Faiss
-        mat = faiss.PCAMatrix(dim, pca, eigen_power=-0.5)
-        mat.train(data)
-        assert mat.is_trained
-        data = mat.apply(data)
-        
-        # L2-normalization
-        rows = np.linalg.norm(data, axis=1)
-        data = np.divide(data, rows.reshape((rows.shape[0], 1)))
-        
-        return data
+        return np.array(labels, dtype=int)
     
     @staticmethod
     def run_kmeans(data: np.ndarray, k: int) -> tuple:
@@ -103,9 +71,8 @@ class KMeans():
         # Perform training
         clus.train(data, index)
         _, I = index.search(data, 1)
-        losses = faiss.vector_to_array(clus.centroids)
         
-        return [int(n[0]) for n in I], losses[-1]
+        return [int(n[0]) for n in I]
     
     @staticmethod
     def cluster_assign(image_list: list, data: data.Dataset, transform: Compose) -> PseudoLabeledData:
