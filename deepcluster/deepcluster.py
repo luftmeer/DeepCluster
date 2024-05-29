@@ -455,8 +455,11 @@ class DeepCluster(BaseEstimator):
         print('-'*50)
         
         print('Label occurences:')
-        true_labels, count = torch.unique(dataset_labels, return_counts=True)
-        print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
+        if isinstance(dataset_labels, torch.Tensor):
+            true_labels, count = torch.unique(dataset_labels, return_counts=True)
+            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
+        elif isinstance(dataset_labels, list):
+            print(f'- True labels: {dict(sorted(collections.Counter(dataset_labels).items()))}')
         print(f'- Computed labels: {dict(sorted(collections.Counter(pseudo_labels).items()))}')
         
         print('-'*50)
