@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 
 class PseudoLabeledData(data.Dataset):
-    def __init__(self, pseudolabels: list, dataset: torch.utils.data.DataSet, transform: torchvision.transforms.Compose) -> None:
+    def __init__(self, pseudolabels: list, dataset: torch.utils.data.Dataset, transform: torchvision.transforms.Compose) -> None:
         self.dataset = self.create_dataset(pseudolabels, dataset)
         self.transform = transform
         self.targets = pseudolabels # For nmi calculation
@@ -28,7 +28,7 @@ class PseudoLabeledData(data.Dataset):
             Combined list of image and its computated feature label.
         """
         images = []
-        for idx, label in tqdm(enumerate(pseudolabels), desc='Creating Training Dataset', total=len(image_idxs)):
+        for idx, label in tqdm(enumerate(pseudolabels), desc='Creating Training Dataset', total=len(pseudolabels)):
             image = dataset[idx][0]
             images.append((image, label))
         
