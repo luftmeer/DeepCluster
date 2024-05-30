@@ -145,7 +145,7 @@ def main(args):
         cluster_assign_tf=ca_tf,
         epochs=args.epochs,
         dataset_name=DATASET[args.dataset],
-        clustering_method='sklearn'
+        clustering_method=args.clustering_method
     )
 
     train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
@@ -159,8 +159,8 @@ def main(args):
     execution_time = DC_model.execution_time
     losses = DC_model.train_losses
     accuracies = DC_model.train_accuracies
-    #classes = list(DC_model.train_classes)
     nmi = DC_model.train_nmi
+    nmi.insert(0, 0)
 
     metrics = {
         'Epochs': list(range(1, args.epochs + 1)),
@@ -169,8 +169,7 @@ def main(args):
         'Execution Time (s)': execution_time,
         'Losses': losses,
         'Accuracies': accuracies,
-        #'Classes': [classes] * args.epochs,
-        'Nmi': [nmi]
+        'Nmi': nmi
     }
 
     df = pd.DataFrame(metrics)
@@ -193,6 +192,10 @@ if __name__ == '__main__':
                         help='Batch Size.')
     parser.add_argument('--k', type=int, required=True,
                         help='Amount of clusters.')
+    parser.add_argument('--clustering_method', type=int, required=True,
+                        help='Clustering Method.')
 
     args = parser.parse_args()
     main(args)
+
+# python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss

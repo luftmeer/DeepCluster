@@ -450,10 +450,10 @@ class DeepCluster(BaseEstimator):
 
         print("-" * 20, "Results", "-" * 20)
         print(f"Average loss: {torch.mean(losses)}")
-        self.train_losses.append(torch.mean(losses))
+        self.train_losses.append(torch.mean(losses).item())
 
         print(f"Accuracy: {torch.mean(accuracies)}")
-        self.train_accuracies.append(torch.mean(accuracies))
+        self.train_accuracies.append(torch.mean(accuracies).item())
         print("-" * 50)
 
         print('Normalized Mutual Information Scores:')
