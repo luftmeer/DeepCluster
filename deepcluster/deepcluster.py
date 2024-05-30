@@ -205,7 +205,7 @@ class DeepCluster(BaseEstimator):
 
             # Compute Features
             features = self.compute_features(data)
-            
+
             # PCA reduce features
             features = self.pca_reduction(features)
 
@@ -214,7 +214,7 @@ class DeepCluster(BaseEstimator):
 
             # Create the training data set
             train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
-            
+
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
             sampler = torch.utils.data.RandomSampler(train_dataset)
@@ -351,7 +351,7 @@ class DeepCluster(BaseEstimator):
             # Free up GPU memory
             del input, aux
             torch.cuda.empty_cache()
-                
+
         return features
 
     def pca_reduction(self, features: np.ndarray) -> np.ndarray:
