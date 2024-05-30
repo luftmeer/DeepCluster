@@ -235,6 +235,7 @@ class DeepCluster(BaseEstimator):
                 nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
 
                 print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+                self.train_nmi.append(nmi)
 
             print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
             print('-'*50)
