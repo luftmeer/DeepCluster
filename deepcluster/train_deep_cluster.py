@@ -1,6 +1,6 @@
 from models.AlexNet import AlexNet
 from deepcluster import DeepCluster
-from utils.kmeans import KMeans
+from utils.faiss_kmeans import FaissKMeans
 
 import torch
 import torchvision
@@ -140,6 +140,8 @@ def main():
     
     print("Starting Training...")
     DC_model.fit(train_loader)
+    print("after fitting")
+    print(DC_model.train_losses)
     print("Training Done.")
 
 if __name__ == '__main__':

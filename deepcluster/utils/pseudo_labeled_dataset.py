@@ -1,31 +1,49 @@
 from torch.utils import data
-import torchvision
+from torchvision import transforms
+from torchvision.transforms import functional as F
 from PIL import Image
 import torch
 from tqdm import tqdm
+import numpy as np
+
 
 class PseudoLabeledData(data.Dataset):
-    def __init__(self, image_idxs, pseudolabels, dataset, transform: torchvision.transforms.Compose) -> None:
-        self.images = self.create_dataset(image_idxs, pseudolabels, dataset)
+    def __init__(self, pseudolabels: list, dataset: torch.utils.data.Dataset, transform: transforms.Compose) -> None:
+        self.dataset = self.create_dataset(pseudolabels, dataset)
         self.transform = transform
         self.targets = pseudolabels # For nmi calculation
         
-    def create_dataset(self, image_idxs, pseudolabels, dataset) -> list:
-        label_to_index = {label: idx for idx, label in enumerate(set(pseudolabels))}
+    def create_dataset(self, pseudolabels:list , dataset: torch.utils.data.Dataset) -> list:
+        """Creates a new dataset of existing data inputs and newly computated features.
+
+        Parameters
+        ----------
+        pseudolabels: list
+            Clustered feature labels.
+            
+        dataset: torch.utils.data.Dataset
+            Original data points where the new labels are added to.
+
+        Returns
+        -------
+        list:
+            Combined list of image and its computated feature label.
+        """
         images = []
-        for i, idx in tqdm(enumerate(image_idxs), desc='Creating Training Dataset', total=len(image_idxs)):
-            path = dataset[idx][0]
-            pseudolabel = label_to_index[pseudolabels[i]]
-            images.append((path, pseudolabel))
+        for idx, label in tqdm(enumerate(pseudolabels), desc='Creating Training Dataset', total=len(pseudolabels)):
+            image = dataset[idx][0]
+            images.append((image, label))
         
         return images
     
     def __getitem__(self, index):
-        path, pseudolabel = self.images[index]
-        if isinstance(path, torch.Tensor):
-            return path, pseudolabel
+        image, pseudolabel = self.dataset[index]
+        if isinstance(image, torch.Tensor):
+            image = F.to_pil_image(image.to('cpu'))
+            image = self.transform(image)
+            return image, pseudolabel
         
-        with open(path, 'rb') as f:
+        with open(image, 'rb') as f:
             img = Image.open(f)
         
         img = img.convert('RGB')
@@ -36,4 +54,4 @@ class PseudoLabeledData(data.Dataset):
         return img, pseudolabel
     
     def __len__(self):
-        return len(self.images)
+        return len(self.dataset)

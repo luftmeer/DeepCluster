@@ -7,11 +7,15 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-from utils import kmeans
+from utils import faiss_kmeans
+from utils.pseudo_labeled_dataset import PseudoLabeledData
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
 import collections
+import faiss
+import time
+
 
 import torch
 from sklearn.cluster import KMeans
@@ -24,21 +28,24 @@ BASE_CPT = './checkpoints/'
 
 
 class DeepCluster(BaseEstimator):
-    def __init__(self,
-                 model: nn.Module,  # CNN Model
-                 optim: optim.Optimizer,  # Optimizer for the parameters of the model
-                 optim_tl: optim.Optimizer,  # Optimizer for the Top Layer Parameters
-                 loss_criterion: object,  # PyTorch Loss Function
-                 cluster_assign_tf: transforms,
-                 dataset_name: str,  # Name of the dataset when saving checkpoints
-                 checkpoint: str = None,  # Direct path to the checkpoint
-                 epochs: int = 500,  # Training Epoch
-                 batch_size: int = 256,
-                 k: int = 1000,
-                 verbose: bool = False,  # Verbose output while training
-                 pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
-                 clustering_method: str = 'faiss',
-                 ):
+    def __init__(
+                self,
+                model: nn.Module,  # CNN Model
+                optim: optim.Optimizer,  # Optimizer for the parameters of the model
+                optim_tl: optim.Optimizer,  # Optimizer for the Top Layer Parameters
+                loss_criterion: object,  # PyTorch Loss Function
+                cluster_assign_tf: transforms,
+                dataset_name: str,  # Name of the dataset when saving checkpoints
+                checkpoint: str = None,  # Direct path to the checkpoint
+                epochs: int = 500,  # Training Epoch
+                batch_size: int = 256,
+                k: int = 1000,
+                verbose: bool = False,  # Verbose output while training
+                pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
+                clustering_method: str = 'faiss',
+                pca_method: str = 'faiss',
+                pca_whitening: bool = True
+                ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
         Parameters
@@ -79,11 +86,22 @@ class DeepCluster(BaseEstimator):
         pca_reduction: int, default=256,
             Defines to how many features the dataset is reduced by the PCA algorithm of choice.
             
-        feature_computation: str, default='faiss',
+        clustering_method: str, default='faiss',
             Which method should be used to calculate the features.
             
-            faiss: Uses the implementation by Facebook AI Research which is also used by the authors, especially the k-Means algorithm.
-            sklearn: Uses the PCA and k-Means implementation by scikit-learn.
+            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al. TODO: Link to source/Paper name/DOI
+            sklearn: Uses the standard k-Means algorithm of the scikit-learn library.
+
+        pca_method: str, default='faiss',
+            Which PCA reduction method to use for the preprocession of the computated features.
+
+            faiss: Uses the PCA reduction method implemented by Facebook AI Research.
+            sklearn: Uses the PCA reduction method implemented in the scikit-learn library.
+
+            Both methods automatically whiten the features.
+
+        pca_whitening: bool, default=True,
+            If set to True, the PCA reduction method will whiten the reduced dataset.
         """
         self.model = model
         self.optimizer = optim
@@ -97,10 +115,24 @@ class DeepCluster(BaseEstimator):
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.clustering_method = clustering_method
+        self.pca_method = pca_method
         self.checkpoint = checkpoint
         self.dataset_name = dataset_name
         self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
         self.cluster_logs = []
+        self.train_losses = []
+        self.train_accuracies = []
+        self.train_nmi = []
+        self.execution_time = []
+
+        self.pca_whitening = pca_whitening
+
+        # Set clustering algorithm
+        if self.clustering_method == 'faiss':
+            self.clustering = faiss_kmeans.FaissKMeans(self.k)
+        elif self.clustering_method == 'sklearn':
+            self.clustering = KMeans(n_clusters=self.k)
+
 
     def save_checkpoint(self, epoch: int):
         """Helper Function to continuously store a checkpoint of the current state of the CNN training
@@ -146,7 +178,7 @@ class DeepCluster(BaseEstimator):
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.optimizer_tl.load_state_dict(checkpoint['optimizer_tl'])
             self.cluster_logs = checkpoint['cluster_logs']
-            print(f'Loaded checkpoint at epoch {self.start_epoch}')
+            print(f'Loaded checkpoint at epoch {self.start_epoch+1}')
             del checkpoint
         else:
             print(f'No checkpoint found at {self.checkpoint}')
@@ -164,16 +196,11 @@ class DeepCluster(BaseEstimator):
         cudnn.benchmark = True
         fd = int(self.model.top_layer.weight.size()[1])
 
-        # Set KMeans Clustering
-        if self.clustering_method == 'faiss':
-            clustering = kmeans.KMeans(self.k)
-        elif self.clustering_method == 'sklearn':
-            clustering = KMeans(n_clusters=self.k)
-
         for epoch in range(self.start_epoch, self.epochs):
+            start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
-            
+
             # Remove head
             self.model.top_layer = None
             self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
@@ -181,23 +208,14 @@ class DeepCluster(BaseEstimator):
             # Compute Features
             features = self.compute_features(data)
 
-            # Cluster features
-            if self.clustering_method == 'faiss':
-                _ = clustering.fit(features, self.pca)
-            elif self.clustering_method == 'sklearn':
-                # PCA reduction
-                reduced_features = PCA(n_components=self.pca, whiten=True).fit_transform(features)
-                labels = clustering.fit_predict(reduced_features)
-                images_list = [[] for i in range(self.k)]
-                for i in range(len(features)):
-                    images_list[labels[i]].append(i)
+            # PCA reduce features
+            features = self.pca_reduction(features)
 
-            # Assign Pseudo-Labels
-            if self.clustering_method == 'faiss':
-                train_dataset = clustering.cluster_assign(clustering.images_list, data.dataset,
-                                                          self.cluster_assign_transform)
-            elif self.clustering_method == 'sklearn':
-                train_dataset = kmeans.KMeans.cluster_assign(images_list, data.dataset, self.cluster_assign_transform)
+            # Cluster features and obtain the resulting labels
+            labels = self.apply_clustering(features)
+
+            # Create the training data set
+            train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
@@ -220,36 +238,18 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            loss = self.train(train_data)
+            losses, accuracies = self.train(train_data)
 
-            print(f'Classification Loss: {loss}')
-            # print(f'Clustering Loss: {clustering_loss}')
+            # Print the results of this epoch
+            self.print_results(epoch, losses, accuracies, train_data.dataset.targets, data.dataset.targets)
 
-            print('-'*50)
-            print('Normalized Mutual Information Scores:')
-            if len(self.cluster_logs) > 0:
-                nmi = normalized_mutual_info_score(train_data.dataset.targets, self.cluster_logs[-1])
-
-                print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
-            
-            print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(data.dataset.targets, train_data.dataset.targets)}')
-            print('-'*50)
-            
-            print('Label occurences:')
-            true_labels, count = torch.unique(data.dataset.targets, return_counts=True)
-            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
-            print(f'- Computed labels: {dict(sorted(collections.Counter(train_data.dataset.targets).items()))}')
-            
-            print('-'*50)
-            
-            if self.clustering_method == 'faiss':
-                self.cluster_logs.append(train_data.dataset.targets)
-            elif self.clustering_method == 'sklearn':
-                self.cluster_logs.append(train_data.dataset.targets)
+            # Store psuedo-labels
+            self.cluster_logs.append(train_data.dataset.targets)
 
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
+            self.execution_time.append(time.time() - start_time)
 
     def predict(self, batch: Tensor):
         """
@@ -266,7 +266,7 @@ class DeepCluster(BaseEstimator):
         return pred_idx
 
 
-    def train(self, train_data: data.DataLoader) -> float:
+    def train(self, train_data: data.DataLoader) -> tuple:
         """Training method for each epoch using the training dataset.
 
         Parameters
@@ -283,10 +283,10 @@ class DeepCluster(BaseEstimator):
 
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        different_classes = set()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
-            if self.device.type == 'cuda':
-                input, target = input.cuda(), target.cuda()
+            # Recasting target as LongTensor
+            target = target.type(torch.LongTensor)
+            input, target = input.to(self.device), target.to(self.device)
             input.requires_grad = True
 
             # Forward pass
@@ -309,9 +309,6 @@ class DeepCluster(BaseEstimator):
             _, predicted = output.max(1)
             accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
 
-            # add the different classes to the set
-            different_classes.update(target.cpu().numpy())
-
             # Backward pass and optimize
             self.optimizer.zero_grad()
             self.optimizer_tl.zero_grad()
@@ -323,17 +320,7 @@ class DeepCluster(BaseEstimator):
             del input, target, output, loss
             torch.cuda.empty_cache()
 
-        print("-" * 20, "Results", "-" * 20)
-        print("These are the losses")
-        print(losses)
-        print("-" * 50)
-        print("This is the accuracy")
-        print(torch.mean(accuracies))
-        print("-" * 50)
-        print("These are the different classes")
-        print(different_classes)
-        print("-" * 50)
-        return torch.mean(losses)
+        return losses, accuracies
 
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
@@ -369,3 +356,121 @@ class DeepCluster(BaseEstimator):
             torch.cuda.empty_cache()
 
         return features
+
+    def pca_reduction(self, features: np.ndarray) -> np.ndarray:
+        """Applies PCA reduction on the computed features and returns the transformed data.
+        After applying PCA on the features, the data is L2-normalized.
+
+        Parameters
+        ----------
+        features: np.ndarray,
+            Computed features to be reduced by the selected PCA method.
+
+        Returns
+        -------
+        np.ndarray
+            PCA reduced features with the remaining self.pca feature components.
+        """
+        if self.pca_method == 'faiss':
+            _, dim = features.shape
+            features = features.astype(np.float32)
+
+            # PCA transformation + whitening
+            if self.pca_whitening:
+                whitening_value = -0.5
+            else:
+                whitening_value = 0.0
+            mat = faiss.PCAMatrix(dim, self.pca, eigen_power=whitening_value)
+            mat.train(features)
+            assert mat.is_trained
+            features = mat.apply(features)
+
+        elif self.pca_method == 'sklearn':
+            features = PCA(n_components=self.pca, whiten=self.pca_whitening).fit_transform(features)
+
+        # L2-normalization
+        rows = np.linalg.norm(features, axis=1)
+        features = np.divide(features, rows.reshape((rows.shape[0], 1)))
+
+        return features
+
+    def apply_clustering(self, features: np.ndarray) -> np.ndarray:
+        """Applies the selected clustering algorithm on the feature dataset.
+
+        Parameter
+        ---------
+        features: np.ndarray,
+            Computed feature dataset which is either PCA reduced or not.
+
+        Returns
+        -------
+        np.ndarray
+            Labels of the clustering result.
+        """
+        if self.clustering_method == 'faiss':
+            labels = self.clustering.fit(features)
+        elif self.clustering_method == 'sklearn':
+            labels = self.clustering.fit_predict(features)
+
+        return labels
+
+    def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
+        """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
+
+        Parameters
+        ----------
+        features: np.ndarray,
+            Calculated features which are to be clustered.
+
+        Returns
+        -------
+        Dataset which contains both the original data points with their obtained labels from the feature clustering.
+        """
+        return PseudoLabeledData(labels, dataset, transform)
+
+    def print_results(self, epoch: int, losses: torch.Tensor, accuracies: torch.Tensor, pseudo_labels: list, dataset_labels: np.ndarray):
+        """Function for better overview when printing epoch results after the training process has been completed.
+
+        Parameters
+        epoch: int,
+            Current epoch.
+
+        losses: torch.Tensor,
+            Each loss after the training.
+
+        accuracies: torch.Tensor,
+            Accuracies when comparing the pseudo-labels and the resulting output when training.
+
+        pseudo_labels: list,
+            Pseudo-Labels of the training dataset.
+
+        dataset_labels: np.ndarray,
+            The actual labels of the dataset.
+        """
+
+        print("-" * 20, "Results", "-" * 20)
+        print(f"Average loss: {torch.mean(losses)}")
+        self.train_losses.append(torch.mean(losses).item())
+
+        print(f"Accuracy: {torch.mean(accuracies)}")
+        self.train_accuracies.append(torch.mean(accuracies).item())
+        print("-" * 50)
+
+        print('Normalized Mutual Information Scores:')
+        if len(self.cluster_logs) > 0:
+            nmi = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
+            self.train_nmi.append(nmi)
+            print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+
+        print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(dataset_labels, pseudo_labels)}')
+        print('-'*50)
+
+        print('Label occurences:')
+        if isinstance(dataset_labels, torch.Tensor):
+            true_labels, count = torch.unique(dataset_labels, return_counts=True)
+            print(f'- True labels: {dict(zip(true_labels.tolist(), count.tolist()))}')
+        elif isinstance(dataset_labels, list):
+            print(f'- True labels: {dict(sorted(collections.Counter(dataset_labels).items()))}')
+        print(f'- Computed labels: {dict(sorted(collections.Counter(pseudo_labels).items()))}')
+
+        print('-'*50)
