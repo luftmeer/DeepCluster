@@ -7,7 +7,7 @@ from models.AlexNet import AlexNet
 from models.VGG import VGG16
 from models.FeedForward import FeedForward
 from deepcluster import DeepCluster
-from utils.kmeans import KMeans
+from utils.faiss_kmeans import FaissKMeans
 
 import torch
 import torchvision
