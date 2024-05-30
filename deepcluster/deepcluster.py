@@ -447,13 +447,16 @@ class DeepCluster(BaseEstimator):
 
         print("-" * 20, "Results", "-" * 20)
         print(f"Average loss: {torch.mean(losses)}")
+        self.train_losses.append(torch.mean(losses))
+
         print(f"Accuracy: {torch.mean(accuracies)}")
+        self.train_accuracies.append(torch.mean(accuracies))
         print("-" * 50)
 
         print('Normalized Mutual Information Scores:')
         if len(self.cluster_logs) > 0:
             nmi = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
-
+            self.train_nmi.append(nmi)
             print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
 
         print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(dataset_labels, pseudo_labels)}')

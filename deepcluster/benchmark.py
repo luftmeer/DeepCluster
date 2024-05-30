@@ -162,7 +162,7 @@ def main(args):
     execution_time = end_time - start_time
     losses = DC_model.train_losses
     accuracies = DC_model.train_accuracies
-    classes = list(DC_model.train_classes)
+    #classes = list(DC_model.train_classes)
     nmi = DC_model.train_nmi
     nmi.insert(0, 0)
 
@@ -173,7 +173,7 @@ def main(args):
         'Execution Time (s)': [execution_time] * args.epochs,
         'Losses': losses,
         'Accuracies': accuracies,
-        'Classes': [classes] * args.epochs,
+        #'Classes': [classes] * args.epochs,
         'Nmi': [nmi]
     }
 
