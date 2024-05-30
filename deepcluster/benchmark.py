@@ -79,8 +79,6 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
 
 
 def main(args):
-    start_time = time.time()
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
 
@@ -156,21 +154,19 @@ def main(args):
     DC_model.fit(train_loader)
     print(DC_model.train_losses)
     print("Training Done.")
-    end_time = time.time()
 
     # save metrics
-    execution_time = end_time - start_time
+    execution_time = DC_model.execution_time
     losses = DC_model.train_losses
     accuracies = DC_model.train_accuracies
     #classes = list(DC_model.train_classes)
     nmi = DC_model.train_nmi
-    nmi.insert(0, 0)
 
     metrics = {
         'Epochs': list(range(1, args.epochs + 1)),
         'Dataset': [args.dataset] * args.epochs,
         'architecture': [args.algorithm] * args.epochs,
-        'Execution Time (s)': [execution_time] * args.epochs,
+        'Execution Time (s)': execution_time,
         'Losses': losses,
         'Accuracies': accuracies,
         #'Classes': [classes] * args.epochs,

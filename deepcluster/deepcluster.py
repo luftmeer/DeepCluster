@@ -14,6 +14,7 @@ from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
 import collections
 import faiss
+import time
 
 
 import torch
@@ -121,8 +122,8 @@ class DeepCluster(BaseEstimator):
         self.cluster_logs = []
         self.train_losses = []
         self.train_accuracies = []
-        self.train_classes = set()
         self.train_nmi = []
+        self.execution_time = []
 
         self.pca_whitening = pca_whitening
 
@@ -196,6 +197,7 @@ class DeepCluster(BaseEstimator):
         fd = int(self.model.top_layer.weight.size()[1])
 
         for epoch in range(self.start_epoch, self.epochs):
+            start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
 
@@ -247,6 +249,7 @@ class DeepCluster(BaseEstimator):
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
+            self.execution_time.append(time.time() - start_time)
 
     def predict(self, batch: Tensor):
         """
