@@ -1,6 +1,7 @@
 from models.AlexNet import AlexNet
 from deepcluster import DeepCluster
 from utils.faiss_kmeans import FaissKMeans
+from utils.datasets import dataset_loader
 
 import torch
 import torchvision
@@ -9,69 +10,9 @@ import faiss
 import numpy as np
 from torch.utils.data.sampler import RandomSampler
 
-def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: str='CIFAR10', valid_size: float=0.1, shuffle=True) -> tuple:
-    print("Loading Dataset...")
-    if dataset == 'CIFAR10':
-        transform = Compose(
-                [
-                    Resize(256),
-                    CenterCrop(224),
-                    ToTensor(),
-                    Normalize(
-                        mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225]
-                    )
-                ]
-            )
-        
-        train_data = torchvision.datasets.CIFAR10(
-            root=data_dir, train=True,
-            download=True, transform=transform,
-        )
-    elif dataset == 'MNIST':
-        transform = Compose(
-                [
-                    Resize(256),
-                    CenterCrop(224),
-                    ToTensor(),
-                    Normalize(
-                        (0.1307,), (0.3081,)
-                    )
-                ]
-            )
-        
-        train_data = torchvision.datasets.MNIST(
-            root=data_dir, train=True,
-            download=True, transform=transform,
-        )
-
-    print("Done Loading Dataset.")
-    
-    train_sampler = RandomSampler(train_data)
-
-    train_loader = torch.utils.data.DataLoader(
-        train_data, batch_size=batch_size, sampler=train_sampler)
-
-    return train_loader
-
 def main():
-    """ print("Loading Dataset...")
-    cifar10 = torchvision.datasets.CIFAR10(
-        root='./data', train=True,
-        download=True, transform = Compose(
-            [
-                Resize(256),
-                CenterCrop(224),
-                ToTensor(),
-                Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                )
-            ]
-        )
-    )
-    print("Done Loading Dataset.") """
     dataset_name = 'MNIST'
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
     
@@ -136,7 +77,7 @@ def main():
 
     #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, dataset='MNIST', seed=1)
+    train_loader = dataset_loader(dataset_name, './data', batch_size)
     
     print("Starting Training...")
     DC_model.fit(train_loader)
