@@ -577,7 +577,7 @@ class DeepCluster(BaseEstimator):
             os.makedirs(f'{BASE_METRICS}{self.dataset_name}')
         
         # When the file doesn't exist, create it and add the header
-        if not os.path.exists({self.metrics_file}):
+        if not os.path.exists(self.metrics_file):
             if self.verbose: print(f'Creating metrics file at \'{self.metrics_file}\'.')
             with open(self.metrics_file, 'w', newline='') as file:
                 writer = csv.writer(file)
