@@ -266,8 +266,8 @@ class DeepCluster(BaseEstimator):
 
             losses, accuracies = self.train(train_data)
             if self.metrics:
-                self.loss_overall_avg.update(losses)
-                self.accuracy_overall_avg.update(accuracies)
+                self.loss_overall_avg.update(torch.mean(losses))
+                self.accuracy_overall_avg.update(torch.mean(accuracies))
 
             # Epoch Metrics
             if self.metrics:
@@ -285,6 +285,11 @@ class DeepCluster(BaseEstimator):
             # Print Metrics
             if self.metrics:
                 self.print_metrics(epoch)
+                self.features_time.reset()
+                self.pca_time.reset()
+                self.cluster_time.reset()
+                self.train_time.reset()
+                self.epoch_time.reset()
                         
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
@@ -592,15 +597,15 @@ class DeepCluster(BaseEstimator):
             # Add Metrics Row
             row = [
                 epoch, 
-                self.loss_overall_avg.val,
-                self.accuracy_overall_avg.val,
+                torch.mean(self.loss_overall_avg.val).numpy(),
+                torch.mean(self.accuracy_overall_avg.val).numpy(),
                 nmi,
                 nmi_epoch,
-                self.epoch_time.val,
-                self.train_time.val,
-                self.features_time.val,
-                self.cluster_time.val,
-                self.pca_time.val,
+                self.epoch_time.sum,
+                self.train_time.sum,
+                self.features_time.sum,
+                self.cluster_time.sum,
+                self.pca_time.sum,
             ]
             writer.writerow(row)
         
@@ -609,9 +614,9 @@ class DeepCluster(BaseEstimator):
     def print_metrics(self, epoch: int):
         
         print('-' * 15, f' Metrics after {epoch+1} Epochs ', '-' * 15)
-        print(f'- Feature time: {self.features_time.val} [avg: {self.features_time.avg}]')
-        print(f'- PCA time: {self.pca_time.val} [avg: {self.pca_time.avg}]')
-        print(f'- Cluster time: {self.cluster_time.val} [avg: {self.cluster_time.avg}]')
-        print(f'- Training time: {self.train_time.val} [avg: {self.train_time.avg}]')
-        print(f'- Epoch time: {self.epoch_time.val} [avg: {self.epoch_time.avg}]')
+        print(f'- Feature time: {self.features_time.sum} [avg: {self.features_time.avg}]')
+        print(f'- PCA time: {self.pca_time.sum} [avg: {self.pca_time.avg}]')
+        print(f'- Cluster time: {self.cluster_time.sum} [avg: {self.cluster_time.avg}]')
+        print(f'- Training time: {self.train_time.sum} [avg: {self.train_time.avg}]')
+        print(f'- Epoch time: {self.epoch_time.sum} [avg: {self.epoch_time.avg}]')
         print('-' * 60)
