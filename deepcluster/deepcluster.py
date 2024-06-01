@@ -155,7 +155,7 @@ class DeepCluster(BaseEstimator):
             if metrics_file:
                 self.metrics_file = metrics_file
             else:
-                self.metrics_file = f'{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d')}_{self.model}.csv' # The File the metrics are stored at after each epoch
+                self.metrics_file = f'{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime("%Y-%m-%d")}_{self.model}.csv' # The File the metrics are stored at after each epoch
             
 
 
