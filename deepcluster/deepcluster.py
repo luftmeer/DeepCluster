@@ -8,6 +8,7 @@ from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
 from utils import faiss_kmeans
+from utils.benchmarking import Meter
 from utils.pseudo_labeled_dataset import PseudoLabeledData
 import os
 from sklearn.metrics import normalized_mutual_info_score
@@ -15,6 +16,8 @@ from tqdm import tqdm
 import collections
 import faiss
 import time
+from datetime import datetime
+import csv
 
 
 import torch
@@ -25,7 +28,10 @@ from torch import Tensor
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
-
+# Base folder for metrics
+BASE_METRICS = './metrics/'
+# Metrics Header
+METRICS_HEADER = ['epoch', 'loss_avg', 'accuracy', 'nmi_true_ped', 'nmi_epochs', 'epoch_time', 'train_time', 'features_time', 'cluster_time', 'pca_time']
 
 class DeepCluster(BaseEstimator):
     def __init__(
@@ -44,7 +50,9 @@ class DeepCluster(BaseEstimator):
                 pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
                 clustering_method: str = 'faiss',
                 pca_method: str = 'faiss',
-                pca_whitening: bool = True
+                pca_whitening: bool = True,
+                metrics: bool=True,
+                metrics_file: str=None, # Path to metrics csv file, mainly when continuing a previous training after the process stopped 
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -124,6 +132,7 @@ class DeepCluster(BaseEstimator):
         self.train_accuracies = []
         self.train_nmi = []
         self.execution_time = []
+        self.metrics=metrics
 
         self.pca_whitening = pca_whitening
 
@@ -132,6 +141,22 @@ class DeepCluster(BaseEstimator):
             self.clustering = faiss_kmeans.FaissKMeans(self.k)
         elif self.clustering_method == 'sklearn':
             self.clustering = KMeans(n_clusters=self.k)
+        
+        # Init metrics
+        if self.metrics:
+            self.epoch_time = Meter()
+            self.train_time = Meter()
+            self.loss_overall_avg = Meter()
+            self.accuracy_overall_avg = Meter()
+            self.features_time = Meter()
+            self.cluster_time = Meter()
+            self.pca_time = Meter()
+            
+            if metrics_file:
+                self.metrics_file = metrics_file
+            else:
+                self.metrics_file = f'{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime("%Y-%m-%d")}_{self.model}.csv' # The File the metrics are stored at after each epoch
+            
 
 
     def save_checkpoint(self, epoch: int):
@@ -195,7 +220,8 @@ class DeepCluster(BaseEstimator):
 
         cudnn.benchmark = True
         fd = int(self.model.top_layer.weight.size()[1])
-
+        if self.metrics:
+            end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
@@ -239,17 +265,35 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.to(self.device)
 
             losses, accuracies = self.train(train_data)
+            if self.metrics:
+                self.loss_overall_avg.update(torch.mean(losses))
+                self.accuracy_overall_avg.update(torch.mean(accuracies))
 
+            # Epoch Metrics
+            if self.metrics:
+                self.epoch_time.update(time.time() - end)
+                end = time.time()
+                
             # Print the results of this epoch
             self.print_results(epoch, losses, accuracies, train_data.dataset.targets, data.dataset.targets)
 
             # Store psuedo-labels
             self.cluster_logs.append(train_data.dataset.targets)
 
+            self.execution_time.append(time.time() - start_time)
+            
+            # Print Metrics
+            if self.metrics:
+                self.print_metrics(epoch)
+                self.features_time.reset()
+                self.pca_time.reset()
+                self.cluster_time.reset()
+                self.train_time.reset()
+                self.epoch_time.reset()
+                        
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
-            self.execution_time.append(time.time() - start_time)
 
     def predict(self, batch: Tensor):
         """
@@ -283,6 +327,8 @@ class DeepCluster(BaseEstimator):
 
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        if self.metrics:
+            end = time.time()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
@@ -315,10 +361,15 @@ class DeepCluster(BaseEstimator):
             loss.backward()
             self.optimizer.step()
             self.optimizer_tl.step()
-
+            
             # Free up GPU memory
             del input, target, output, loss
             torch.cuda.empty_cache()
+            
+            # Train Metrics
+            if self.metrics:
+                self.train_time.update(time.time() - end)
+                end = time.time()
 
         return losses, accuracies
 
@@ -335,6 +386,8 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
+        if self.metrics:
+            end = time.time()
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
@@ -354,6 +407,10 @@ class DeepCluster(BaseEstimator):
             # Free up GPU memory
             del input, aux
             torch.cuda.empty_cache()
+            
+            if self.metrics:
+                self.features_time.update(time.time() - end)
+                end = time.time()
 
         return features
 
@@ -371,6 +428,9 @@ class DeepCluster(BaseEstimator):
         np.ndarray
             PCA reduced features with the remaining self.pca feature components.
         """
+        if self.metrics:
+            end = time.time()
+            
         if self.pca_method == 'faiss':
             _, dim = features.shape
             features = features.astype(np.float32)
@@ -392,6 +452,9 @@ class DeepCluster(BaseEstimator):
         rows = np.linalg.norm(features, axis=1)
         features = np.divide(features, rows.reshape((rows.shape[0], 1)))
 
+        if self.metrics:
+            self.pca_time.update(time.time() - end)
+        
         return features
 
     def apply_clustering(self, features: np.ndarray) -> np.ndarray:
@@ -407,10 +470,16 @@ class DeepCluster(BaseEstimator):
         np.ndarray
             Labels of the clustering result.
         """
+        if self.metrics:
+            end = time.time()
+            
         if self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
+
+        if self.metrics:
+            self.cluster_time.update(time.time() - end)
 
         return labels
 
@@ -458,11 +527,14 @@ class DeepCluster(BaseEstimator):
 
         print('Normalized Mutual Information Scores:')
         if len(self.cluster_logs) > 0:
-            nmi = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
-            self.train_nmi.append(nmi)
-            print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi}')
+            nmi_epoch = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
+            self.train_nmi.append(nmi_epoch)
+            print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi_epoch}')
+        else:
+            nmi_epoch = 0.
 
-        print(f'- True labels and computed features at epoch {epoch+1}: {normalized_mutual_info_score(dataset_labels, pseudo_labels)}')
+        nmi = normalized_mutual_info_score(dataset_labels, pseudo_labels)
+        print(f'- True labels and computed features at epoch {epoch+1}: {nmi}')
         print('-'*50)
 
         print('Label occurences:')
@@ -474,3 +546,77 @@ class DeepCluster(BaseEstimator):
         print(f'- Computed labels: {dict(sorted(collections.Counter(pseudo_labels).items()))}')
 
         print('-'*50)
+        
+        if self.metrics:
+            self.write_metrics(epoch, nmi, nmi_epoch)
+            
+        return
+        
+    def write_metrics(self, epoch: int, nmi: float, nmi_epoch: float):
+        """Wrapper function to write metrics directly into a .csv file for data analytics.
+        This function will create a metrics folder in the main directory and in addition a sub-folder for the dataset, if either or both don't exist.
+        After, it creates, if not existing, a .csv file, add headers and appends the metrics after each epoch.
+        
+        The following metrics are stored, for each epoch:
+            - NMI between true and predicted labels
+            - NMI between previous and current epoch of the clustered feature labels
+            - Execution time for each epoch, training, feature calculation, clustering and PCA reduction
+            - Loss and Accuracy of the model training
+
+        Parameters
+        ----------
+        epoch: int,
+            Current epoch.
+            
+        nmi: float,
+            The Normalized Mutual Information Score between the true and predicted labels.
+        
+        nmi_epoch: float,
+            The Normalized Mutual Information Score between the current epoch clustered labels and of the previous epochs' clustered labels.
+        """
+        
+        if not os.path.exists(BASE_METRICS):
+            os.makedirs(BASE_METRICS)
+            
+        if not os.path.exists(f'{BASE_METRICS}{self.dataset_name}'):
+            os.makedirs(f'{BASE_METRICS}{self.dataset_name}')
+        
+        # When the file doesn't exist, create it and add the header
+        if not os.path.exists(self.metrics_file):
+            if self.verbose: print(f'Creating metrics file at \'{self.metrics_file}\'.')
+            with open(self.metrics_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(METRICS_HEADER)
+        
+            
+        if self.verbose:
+            print(f'Storing metrics of current epoch {epoch+1}...')
+            
+        with open(self.metrics_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            # Add Metrics Row
+            row = [
+                epoch, 
+                torch.mean(self.loss_overall_avg.val).numpy(),
+                torch.mean(self.accuracy_overall_avg.val).numpy(),
+                nmi,
+                nmi_epoch,
+                self.epoch_time.sum,
+                self.train_time.sum,
+                self.features_time.sum,
+                self.cluster_time.sum,
+                self.pca_time.sum,
+            ]
+            writer.writerow(row)
+        
+        return
+    
+    def print_metrics(self, epoch: int):
+        
+        print('-' * 15, f' Metrics after {epoch+1} Epochs ', '-' * 15)
+        print(f'- Feature time: {self.features_time.sum} [avg: {self.features_time.avg}]')
+        print(f'- PCA time: {self.pca_time.sum} [avg: {self.pca_time.avg}]')
+        print(f'- Cluster time: {self.cluster_time.sum} [avg: {self.cluster_time.avg}]')
+        print(f'- Training time: {self.train_time.sum} [avg: {self.train_time.avg}]')
+        print(f'- Epoch time: {self.epoch_time.sum} [avg: {self.epoch_time.avg}]')
+        print('-' * 60)
