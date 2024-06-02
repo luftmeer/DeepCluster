@@ -6,17 +6,17 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
         self.features = nn.Sequential(
             nn.Linear(input_dim * input_dim, 500),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Linear(500, 500),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Linear(500, 256),
-            nn.ReLU()
+            nn.ReLU(inplace=True)
         )
 
         self.classifier = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(256, 256),
-            nn.ReLU()
+            nn.ReLU(inplace=True)
         )
 
         self.top_layer = nn.Linear(256, num_classes)
