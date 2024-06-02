@@ -2,7 +2,7 @@ from torch import nn
 import torch
 
 class VGG16(nn.Module):
-    def __init__(self, num_classes=1000, input_dim: int=3, sobel: bool=True):
+    def __init__(self, num_classes=1000, input_dim: int=3, input_size=28, sobel: bool=True):
         """VGG-16 implementation based on the paper Very Deep Convolutional Networks for Large-Scale Image Recognition" by K. Simonyan, and A. Zisserman (https://arxiv.org/abs/1409.1556)
 
         The Convolutional Neural Network consists of 135 feature layers and 3 classification layers.
@@ -79,7 +79,9 @@ class VGG16(nn.Module):
         self.classifier = nn.Sequential(
             # 14th Layer
             nn.Dropout(0.5),
-            nn.Linear(512 * 7 * 7, 4096),
+            # Linear layer dependent on input_size
+            nn.Linear(512 * (input_size // 32) * (input_size // 32), 4096),
+            # nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(inplace=True),
             # 15th Layer
             nn.Dropout(0.5),
