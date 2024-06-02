@@ -232,15 +232,19 @@ class DeepCluster(BaseEstimator):
             self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
 
             # Compute Features
+            print('before features computing')
             features = self.compute_features(data)
 
             # PCA reduce features
+            print('before pca reduction')
             features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
+            print('before apply_clustering')
             labels = self.apply_clustering(features)
 
             # Create the training data set
+            print('before training data set')
             train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
 
             # Sampler -> Random

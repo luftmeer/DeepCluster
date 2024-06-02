@@ -192,10 +192,10 @@ if __name__ == '__main__':
                         help='Batch Size.')
     parser.add_argument('--k', type=int, required=True,
                         help='Amount of clusters.')
-    parser.add_argument('--clustering_method', type=int, required=True,
+    parser.add_argument('--clustering_method', type=str, required=True,
                         help='Clustering Method.')
 
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss
+# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss
