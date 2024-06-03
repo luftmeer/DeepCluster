@@ -74,66 +74,35 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=batch_size, sampler=train_sampler)
 
-    return train_loader, transform
+    return train_data, train_loader, transform
 
 
 def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
 
+    batch_size = args.batch_size
+
+    train_data, train_loader, transform = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1,
+                                                                dataset=DATASET[args.dataset])
+
     algorithm = ALGORITHMS[args.algorithm]
 
     if args.algorithm == 'alexnet':
         model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'vgg':
-        model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
+        model = algorithm(input_dim=train_loader.dataset[0][0].shape[0], num_classes=10, sobel=False,
+                          input_size=train_loader.dataset[0][0].shape[1]).to(device)
     elif args.algorithm == 'feedforward':
-        model = algorithm(input_dim=224*224, num_classes=10).to(device)
-
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        model = algorithm(input_dim=32 * 32, num_classes=10).to(device)
 
     # Optimizer
     optimizer = torch.optim.SGD(
         filter(lambda x: x.requires_grad, model.parameters()),
         lr=args.lr,
         momentum=0.9,
-        weight_decay=10 ** -5,
+        weight_decay=10 ** (-5)
     )
-
-    # Optimizer_TL
-    optimizer_tl = torch.optim.SGD(
-        model.top_layer.parameters(),
-        lr=args.lr,
-        weight_decay=10 ** -5,
-    )
-
-    # Loss Criterion
-    loss = torch.nn.CrossEntropyLoss()
-
-    # Cluster Assign Transformation
-    if args.dataset == 'cifar10':
-        normalize = Normalize(
-            mean=[0.4914, 0.4822, 0.4465],
-            std=[0.2023, 0.1994, 0.2010]
-        )
-    elif args.dataset == 'mnist':
-        normalize = Normalize(
-            (0.1307,), (0.3081,)
-        )
-
-    ca_tf = Compose(
-        [
-            RandomResizedCrop(224),
-            RandomHorizontalFlip(),
-            ToTensor(),
-            normalize
-        ]
-    )
-
-    batch_size = args.batch_size
-
-
-    train_loader, transform = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1, dataset=DATASET[args.dataset])
 
     DeepCluster(
         model=model,
@@ -141,31 +110,10 @@ def main(args):
         train_loader=train_loader,
         epoch=args.epochs,
         k=args.k,
-        transformation=transform
+        transformation=transform,
+        unsupervised_pretrain=train_data,
+        optimizer=optimizer
     )
-
-
-    # save metrics
-    # execution_time = DC_model.execution_time
-    # losses = DC_model.train_losses
-    # accuracies = DC_model.train_accuracies
-    # nmi = DC_model.train_nmi
-    # nmi.insert(0, 0)
-    #
-    # metrics = {
-    #     'Epochs': list(range(1, args.epochs + 1)),
-    #     'Dataset': [args.dataset] * args.epochs,
-    #     'architecture': [args.algorithm] * args.epochs,
-    #     'Execution Time (s)': execution_time,
-    #     'Losses': losses,
-    #     'Accuracies': accuracies,
-    #     'Nmi': nmi
-    # }
-    #
-    # df = pd.DataFrame(metrics)
-    #
-    # print(df)
-    # df.to_csv('training_metrics.csv', index=False)
 
 
 if __name__ == '__main__':
@@ -182,10 +130,8 @@ if __name__ == '__main__':
                         help='Batch Size.')
     parser.add_argument('--k', type=int, required=True,
                         help='Amount of clusters.')
-    parser.add_argument('--clustering_method', type=str, required=True,
-                        help='Clustering Method.')
 
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss
+# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 1 --lr 0.01 --batch_size 64 --k 10

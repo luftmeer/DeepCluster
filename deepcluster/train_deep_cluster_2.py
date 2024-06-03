@@ -32,6 +32,7 @@ import faiss
 import csv
 import os
 
+
 class ReassignedDataset(data.Dataset):
     """A dataset where the new images labels are given in argument. This assigns
     each image withits "pseudolabel"
@@ -69,7 +70,8 @@ class ReassignedDataset(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
-    
+
+
 class UnifLabelSampler(Sampler):
     """Samples elements uniformely accross pseudolabels.
         Args:
@@ -114,9 +116,11 @@ class UnifLabelSampler(Sampler):
 
     def __len__(self):
         return len(self.indexes)
-    
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
+
     def __init__(self):
         self.reset()
 
@@ -138,10 +142,11 @@ def learning_rate_decay(optimizer, t, lr_0):
         lr = lr_0 / np.sqrt(1 + lr_0 * param_group['weight_decay'] * t)
         param_group['lr'] = lr
 
+
 class SimpleCnn(nn.Module):
-    
+
     def __init__(self, num_channels, k=10, input_dim=28):
-        
+
         super(SimpleCnn, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(num_channels, 8, kernel_size=3, stride=1, padding=1),
@@ -152,25 +157,25 @@ class SimpleCnn(nn.Module):
             nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
-        
+
         self.classifier = nn.Sequential(
             # nn.Linear(7*7*16, 64),
-            nn.Linear(input_dim**2, 64),
+            nn.Linear(input_dim ** 2, 64),
             nn.ReLU()
         )
 
         self.top_layer = nn.Linear(64, k)
         self._initialize_weights()
-    
+
     def forward(self, x):
-        
+
         out = self.features(x)
         out = out.reshape(out.size(0), -1)
         out = self.classifier(out)
         if self.top_layer:
             out = self.top_layer(out)
         return out
-    
+
     def _initialize_weights(self):
         for y, m in enumerate(self.modules()):
             if isinstance(m, nn.Conv2d):
@@ -194,7 +199,7 @@ def train_supervised(model, device, train_loader, epoch):
         filter(lambda x: x.requires_grad, model.parameters()),
         lr=0.05,
         momentum=0.9,
-        weight_decay=10**(-5)
+        weight_decay=10 ** (-5)
     )
 
     criterion = nn.CrossEntropyLoss()
@@ -202,20 +207,21 @@ def train_supervised(model, device, train_loader, epoch):
 
     for e in range(epoch):
 
-      epoch_loss = 0.0
+        epoch_loss = 0.0
 
-      for batch_idx, (data, target) in enumerate(train_loader):
-          data, target = data.to(device), target.to(device)
-          optimizer.zero_grad()
-          output = model(data)
-          loss = criterion(output, target)
-          loss.backward()
-          optimizer.step()
-          epoch_loss += output.shape[0] * loss.item()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += output.shape[0] * loss.item()
 
-      print("Epoch Nr: " + str(e + 1))
-      print(epoch_loss / len(train_loader.dataset))
-      
+        print("Epoch Nr: " + str(e + 1))
+        print(epoch_loss / len(train_loader.dataset))
+
+
 def calculate_accuracy(true_labels, predicted_labels):
     # Create a contingency table
     contingency_table = np.zeros((max(true_labels) + 1, max(predicted_labels) + 1), dtype=int)
@@ -234,42 +240,43 @@ def calculate_accuracy(true_labels, predicted_labels):
     accuracy = accuracy_score(true_labels, new_predicted_labels)
     return accuracy
 
+
 def test(model, device, test_loader):
     model.eval()
-    
+
     test_loss = 0
     predicted_labels = []
     true_labels = []
-    
+
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
-            
+
             output = model(data)
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
-            
+
             predicted_labels.append(pred)
             true_labels.append(target)
 
     test_loss /= len(test_loader.dataset)
-    
-     # calculate NMI
+
+    # calculate NMI
     predicted_labels = torch.cat(predicted_labels).cpu().numpy()
     true_labels = torch.cat(true_labels).cpu().numpy()
-    
-    #ValueError: labels_pred must be 1D: shape is (10000, 1)
+
+    # ValueError: labels_pred must be 1D: shape is (10000, 1)
     predicted_labels = np.squeeze(predicted_labels)
     true_labels = np.squeeze(true_labels)
-    
-    print("\n", "="*25, "Test Results", "="*25)
-    
+
+    print("\n", "=" * 25, "Test Results", "=" * 25)
+
     print("Average Loss: " + str(test_loss))
     print("NMI: " + str(normalized_mutual_info_score(true_labels, predicted_labels)))
     print("Calculated Accuracy: " + str(calculate_accuracy(true_labels, predicted_labels)))
-    
-def compute_features(dataloader, model, N, get_labels=False):
 
+
+def compute_features(dataloader, model, N, get_labels=False):
     model.eval()
     labels = []
 
@@ -296,11 +303,12 @@ def compute_features(dataloader, model, N, get_labels=False):
     labels = np.concatenate(labels)
 
     if get_labels:
-      return features, labels
-    
+        return features, labels
+
     else:
-      return features
-  
+        return features
+
+
 def cluster_assign(images_lists, dataset, transformation):
     """Creates a dataset from clustering, with clusters as labels.
     Args:
@@ -320,6 +328,7 @@ def cluster_assign(images_lists, dataset, transformation):
 
     return ReassignedDataset(image_indexes, pseudolabels, dataset, transformation)
 
+
 def train(loader, model, crit, opt, epoch):
     """Training of the CNN.
         Args:
@@ -338,11 +347,10 @@ def train(loader, model, crit, opt, epoch):
     optimizer_tl = torch.optim.SGD(
         model.top_layer.parameters(),
         lr=0.001,
-        weight_decay=10**-5,
+        weight_decay=10 ** -5,
     )
 
     for i, (input_tensor, target) in enumerate(loader):
-
         target = target.cuda()
         input_var = torch.autograd.Variable(input_tensor.cuda())
         target_var = torch.autograd.Variable(target)
@@ -361,30 +369,17 @@ def train(loader, model, crit, opt, epoch):
         optimizer_tl.step()
 
     return losses.avg
-     
-def DeepCluster(model, device, train_loader, epoch, k, transformation):
 
+
+def DeepCluster(model, device, train_loader, epoch, k, transformation, unsupervised_pretrain, optimizer):
     fd = int(model.top_layer.weight.size()[1])
     model.top_layer = None
 
     model = model.to(device)
 
-
-    optimizer = torch.optim.SGD(
-        filter(lambda x: x.requires_grad, model.parameters()),
-        lr=0.001,
-        momentum=0.9,
-        weight_decay=10**(-5)
-    )
-
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(device)
-    #cluster_step
-
-    # train_epoch = []
-    # train_loss = []
-    # train_nmi = []
-    # train_acc = []
+    # cluster_step
 
     csv_file = 'training_metrics_2.csv'
 
@@ -405,7 +400,7 @@ def DeepCluster(model, device, train_loader, epoch, k, transformation):
 
             features, true_labels = compute_features(train_loader, model, len(unsupervised_pretrain), get_labels=True)
 
-          # do PCA reduction to 256 dimensions if the original feature is higher-dimensional
+            # do PCA reduction to 256 dimensions if the original feature is higher-dimensional
             if features.shape[1] > 256:
                 features = PCA(n_components=256).fit_transform(features)
                 # normalize the feature
@@ -426,7 +421,7 @@ def DeepCluster(model, device, train_loader, epoch, k, transformation):
             flat_config.device = 0
             index = faiss.GpuIndexFlatL2(res, dims, flat_config)
 
-            #get new cluster labels
+            # get new cluster labels
             clus.train(features, index)
             _, I = index.search(features, 1)
 
@@ -438,17 +433,15 @@ def DeepCluster(model, device, train_loader, epoch, k, transformation):
             for i in range(len(unsupervised_pretrain)):
                 images_lists[int(labels[i])].append(i)
 
-
             # create new dataset from pseudolabels
             train_dataset = cluster_assign(images_lists, unsupervised_pretrain, transformation)
 
-            #print(len(train_dataset))
-            #print(images_lists)
+            # print(len(train_dataset))
+            # print(images_lists)
 
             # sample images from uniform distribution over classes
             sampler = UnifLabelSampler(int(1 * len(train_dataset)),
-                                        images_lists)
-
+                                       images_lists)
 
             train_dataloader = torch.utils.data.DataLoader(
                 train_dataset,
@@ -480,10 +473,6 @@ def DeepCluster(model, device, train_loader, epoch, k, transformation):
 
             writer.writerow([e, loss.cpu().numpy(), normalized_mutual_info_score(true_labels, labels),
                              calculate_accuracy(true_labels, labels)])
-            # train_epoch.append(e)
-            # train_loss.append(loss.cpu().numpy())
-            # train_nmi.append(normalized_mutual_info_score(true_labels, labels))
-            # train_acc.append(calculate_accuracy(true_labels, labels))
 
 
 
@@ -494,39 +483,39 @@ if __name__ == "__main__":
     # choose device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    transform=transforms.Compose([
-            # resize to 32x32 if mnist
-            transforms.Resize((32, 32)),
-            # for alexnet we have to resize to 224x224
-            #transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            # Magic numbers for MNIST
-            transforms.Normalize((0.1307,), (0.3081,))
-            # Magic numbers for CIFAR10
-            # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transform = transforms.Compose([
+        # resize to 32x32 if mnist
+        transforms.Resize((32, 32)),
+        # for alexnet we have to resize to 224x224
+        # transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        # Magic numbers for MNIST
+        transforms.Normalize((0.1307,), (0.3081,))
+        # Magic numbers for CIFAR10
+        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    
 
     mnist_train = datasets.MNIST('../data', train=True, download=True, transform=transform)
     mnist_test = datasets.MNIST('../data', train=False, transform=transform)
-    
+
     # cifar_train = datasets.CIFAR10('../data', train=True, download=True, transform=transform)
     # cifar_test = datasets.CIFAR10('../data', train=False, transform=transform)
 
     unsupervised_pretrain = mnist_train
     # unsupervised_pretrain = cifar_train
-    train_loader_unsupervised = torch.utils.data.DataLoader(unsupervised_pretrain, batch_size=64, shuffle=False, num_workers=4)
+    train_loader_unsupervised = torch.utils.data.DataLoader(unsupervised_pretrain, batch_size=64, shuffle=False,
+                                                            num_workers=4)
     test_loader = torch.utils.data.DataLoader(mnist_test, batch_size=64, shuffle=True, num_workers=4)
     # test_loader = torch.utils.data.DataLoader(cifar_test, batch_size=64, shuffle=True, num_workers=4)
-    
+
     # simpleCNN = SimpleCnn(
     #     num_channels=train_loader_unsupervised.dataset[0][0].shape[0],
     #     k=10,
     #     input_dim=train_loader_unsupervised.dataset[0][0].shape[1]
     # )
-    
+
     # simpleCNN = simpleCNN.to(device)
-    
+
     # DeepCluster(
     #     model=simpleCNN,
     #     device=device,
@@ -535,7 +524,7 @@ if __name__ == "__main__":
     #     k=10,
     #     transformation=transform
     # )
-    
+
     # vgg16 = VGG16(
     #     input_dim=train_loader_unsupervised.dataset[0][0].shape[0],
     #     num_classes=10,
@@ -553,7 +542,7 @@ if __name__ == "__main__":
     # )
 
     feedforward = FeedForward(
-        input_dim=32*32,
+        input_dim=32 * 32,
         num_classes=10,
     )
     feedforward.to(device)
@@ -566,7 +555,7 @@ if __name__ == "__main__":
         k=10,
         transformation=transform
     )
-    
+
     # alexnet = AlexNet(
     #     input_dim=train_loader_unsupervised.dataset[0][0].shape[0],
     #     num_classes=10,
@@ -582,14 +571,13 @@ if __name__ == "__main__":
     #     k=10,
     #     transformation=transform
     # )
-    
+
     # linear_model(simpleCNN, train_loader_supervised, test_loader)
     # linear_model(vgg15, train_loader_supervised, test_loader)
-    
+
     # Check accuracy on test set
     # test(simpleCNN, device, test_loader)
     # test(vgg16, device, test_loader)
     test(feedforward, device, test_loader)
-    
-    print("DONE!")
 
+    print("DONE!")
