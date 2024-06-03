@@ -275,9 +275,9 @@ class DeepCluster(BaseEstimator):
 
             # Epoch Metrics
             if self.metrics:
-                self.epoch_time.update(time.time() - end)
                 end = time.time()
-                
+                self.epoch_time.update(time.time() - end)
+
             # Print the results of this epoch
             self.print_results(epoch, losses, accuracies, train_data.dataset.targets, data.dataset.targets)
 

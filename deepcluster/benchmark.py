@@ -89,7 +89,7 @@ def main(args):
     elif args.algorithm == 'vgg':
         model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'feedforward':
-        model = algorithm(input_dim=224, num_classes=10).to(device)
+        model = algorithm(input_dim=224*224, num_classes=10).to(device)
 
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
@@ -145,10 +145,11 @@ def main(args):
         cluster_assign_tf=ca_tf,
         epochs=args.epochs,
         dataset_name=DATASET[args.dataset],
-        clustering_method=args.clustering_method
+        clustering_method=args.clustering_method,
+        metrics=True
     )
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1, dataset=DATASET[args.dataset])
 
     print("Starting Training...")
     DC_model.fit(train_loader)
