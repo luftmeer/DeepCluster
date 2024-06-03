@@ -26,7 +26,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
 from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
-from torcheval.metrics.functional import multiclass_accuracy
+from torcheval.metrics import MulticlassAccuracy
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -327,7 +327,7 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = multiclass_accuracy()
+        accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
