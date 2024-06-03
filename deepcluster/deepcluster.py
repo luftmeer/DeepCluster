@@ -23,6 +23,7 @@ import csv
 import torch
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import normalize
 from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 
@@ -449,8 +450,7 @@ class DeepCluster(BaseEstimator):
             features = PCA(n_components=self.pca, whiten=self.pca_whitening).fit_transform(features)
 
         # L2-normalization
-        rows = np.linalg.norm(features, axis=1)
-        features = np.divide(features, rows.reshape((rows.shape[0], 1)))
+        features = normalize(features, norm='l2')
 
         if self.metrics:
             self.pca_time.update(time.time() - end)
