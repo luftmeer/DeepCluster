@@ -158,10 +158,13 @@ class DeepCluster(BaseEstimator):
                 self.metrics_file = metrics_file
             else:
                 self.metrics_file = f'{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime("%Y-%m-%d")}_{self.model}.csv' # The File the metrics are stored at after each epoch
-            
+        
+        # Placeholder for the best accuracy of a Model at an epoch
+        # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
+        # Only a current best model will overwrite a previous best model, when the accuracy is greater than the previous one
+        self.best_model = 0.
 
-
-    def save_checkpoint(self, epoch: int):
+    def save_checkpoint(self, epoch: int, best_model: bool=False):
         """Helper Function to continuously store a checkpoint of the current state of the CNN training
 
         Parameters
@@ -181,6 +184,10 @@ class DeepCluster(BaseEstimator):
         if self.verbose:
             print(f'Saving the current checkpoint at epoch {epoch + 1}..')
 
+        filename = f'{BASE_CPT}/{self.dataset_name}/{self.model}.cpt'
+        if best_model:
+            filename = f'{filename}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+        
         torch.save({
             'epoch': epoch + 1,
             # +1 since, when starting again, the algorithm should continue with the next epoch and not 'redo' this one
@@ -190,7 +197,7 @@ class DeepCluster(BaseEstimator):
             'loss': self.loss_criterion,
             'cluster_logs': self.cluster_logs
         },
-            f'{BASE_CPT}/{self.dataset_name}/{self.model}.cpt')
+            filename)
 
         return
 
@@ -292,7 +299,14 @@ class DeepCluster(BaseEstimator):
                 self.cluster_time.reset()
                 self.train_time.reset()
                 self.epoch_time.reset()
-                        
+            # Store a best model:
+            if self.best_model < torch.mean(accuracies).numpy():
+                print(f'A new best model has been found:')
+                print(f'- Previous model: {self.best_model}')
+                print(f'- Current model: {torch.mean(accuracies).numpy()}')
+                self.save_checkpoint(epoch=epoch, best_model=True)
+                self.best_model = torch.mean(accuracies).numpy()
+            
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
