@@ -1,7 +1,7 @@
 from models.AlexNet import AlexNet
 from deepcluster import DeepCluster
 from utils.faiss_kmeans import FaissKMeans
-from utils.datasets import dataset_loader
+from utils.datasets import dataset_loader, BASE_CA_TRANSFORM, NORMALIZATION
 
 import torch
 import torchvision
@@ -39,24 +39,8 @@ def main():
     loss = torch.nn.CrossEntropyLoss()
 
     # Cluster Assign Transformation
-    if dataset_name == 'CIFAR10':
-        normalize = Normalize(
-            mean=[0.4914, 0.4822, 0.4465],
-            std=[0.2023, 0.1994, 0.2010]
-        )
-    elif dataset_name == 'MNIST':
-        normalize = Normalize(
-            (0.1307,), (0.3081,)
-        )
-
-    ca_tf = Compose(
-        [
-            RandomResizedCrop(224),
-            RandomHorizontalFlip(),
-            ToTensor(),
-            normalize
-        ]
-    )
+    ca_tf = BASE_CA_TRANSFORM.append(NORMALIZATION[dataset_name])
+    ca_tf = Compose(ca_tf)
     
     batch_size = 64
 

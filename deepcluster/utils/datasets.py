@@ -9,6 +9,13 @@ BASE_TRANSFORM = [
     transforms.ToTensor()
 ]
 
+# Cluster Assignment base transformation
+BASE_CA_TRANSFORM = [
+    transforms.RandomResizedCrop(224),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor()
+]
+
 NORMALIZATION = {
     'CIFAR10': transforms.Normalize(
         mean=[0.48900422, 0.47554612, 0.4395709,],
