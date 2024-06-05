@@ -198,7 +198,8 @@ class DeepCluster(BaseEstimator):
             'optimizer': self.optimizer.state_dict(),
             'optimizer_tl': self.optimizer_tl.state_dict(),
             'loss': self.loss_criterion,
-            'cluster_logs': self.cluster_logs
+            'cluster_logs': self.cluster_logs,
+            'metrics_metadata': self.metrics_metadata,
         },
             filename)
 
@@ -215,6 +216,7 @@ class DeepCluster(BaseEstimator):
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.optimizer_tl.load_state_dict(checkpoint['optimizer_tl'])
             self.cluster_logs = checkpoint['cluster_logs']
+            self.metrics_metadata = checkpoint['metrics_metadata']
             print(f'Loaded checkpoint at epoch {self.start_epoch+1}')
             del checkpoint
         else:

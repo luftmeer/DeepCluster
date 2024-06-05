@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--beta2_tl', type=float, choices=range(0, 1), default=0.999) # For Adam
 
     # Loss Function
-    parser.add_argument('--loss_fn', type=str, choices=loss_functions.LOSS_FUNCTIONS, default='L2')
+    parser.add_argument('--loss_fn', type=str, choices=loss_functions.LOSS_FUNCTIONS, default='CrossEntropy')
 
     # PCA Reduction
     parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
