@@ -6,7 +6,7 @@ from deepcluster.models.AlexNet import AlexNet
 from deepcluster.models.VGG import VGG16
 
 # Utils
-from deepcluster.utils import datasets, optimizer
+from deepcluster.utils import datasets, optimizer, loss_functions
 
 # Torch
 import torch
@@ -48,7 +48,8 @@ def parse_args():
     parser.add_argument('--beta1_tl', type=float, choices=range(0, 1), default=0.9) # For Adam
     parser.add_argument('--beta2_tl', type=float, choices=range(0, 1), default=0.999) # For Adam
 
-    # TODO: Loss Function, currently just Cross Entropy
+    # Loss Function
+    parser.add_argument('--loss_fn', type=str, choices=loss_functions.LOSS_FUNCTIONS, default='L2')
 
     # PCA Reduction
     parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
@@ -136,7 +137,7 @@ def main(args):
     print('Created top layer Optimizer...')
     
     # Loss Function
-    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn = loss_functions.loss_function_loader(args.loss_fn)
     
     # Cluster Assignment Transformer
     ca_tf = datasets.BASE_CA_TRANSFORM
