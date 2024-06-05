@@ -161,6 +161,7 @@ def main(args):
         clustering_method=args.clustering,
         metrics=args.metrics,
         metrics_file=args.metrics_file,
+        metrics_metadata=str(args)
     )
     
     
@@ -169,7 +170,7 @@ def main(args):
     print('Done!')
 
 def print_selection(args):
-    print(args)
+    print(str(args))
     '''print('-'*25, 'Arguments Overview', '-'*25)
     print('-'*5, 'Model:')
     print(f'Architecture: {args.arch}')

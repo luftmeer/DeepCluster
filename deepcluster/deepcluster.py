@@ -55,6 +55,7 @@ class DeepCluster(BaseEstimator):
                 pca_whitening: bool = True,
                 metrics: bool=True,
                 metrics_file: str=None, # Path to metrics csv file, mainly when continuing a previous training after the process stopped 
+                metrics_metadata: str=None
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -134,7 +135,8 @@ class DeepCluster(BaseEstimator):
         self.train_accuracies = []
         self.train_nmi = []
         self.execution_time = []
-        self.metrics=metrics
+        self.metrics = metrics
+        self.metrics_metadata = metrics_metadata
 
         self.pca_whitening = pca_whitening
 
@@ -603,6 +605,9 @@ class DeepCluster(BaseEstimator):
         if not os.path.exists(self.metrics_file):
             if self.verbose: print(f'Creating metrics file at \'{self.metrics_file}\'.')
             with open(self.metrics_file, 'w', newline='') as file:
+                if self.metrics_metadata:
+                    # Add metadata to further distinguish the different files in the future
+                    file.write(f'#{self.metrics_metadata}')
                 writer = csv.writer(file)
                 writer.writerow(METRICS_HEADER)
         
