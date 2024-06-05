@@ -185,7 +185,7 @@ class DeepCluster(BaseEstimator):
         if self.verbose:
             print(f'Saving the current checkpoint at epoch {epoch + 1}..')
 
-        filename = f'{BASE_CPT}/{self.dataset_name}/{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.cpt'
+        filename = f"{BASE_CPT}/{self.dataset_name}/{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.cpt"
         if best_model:
             filename = f'{filename}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
         
