@@ -34,9 +34,9 @@ def optimizer_loader(optimizer_name: str, parameter: nn.parameter.Parameter, **k
     # Obtain the attribute from optim for the chosen Optimizer
     loader = getattr(optim, optimizer_name)
     optimizer = loader(parameter)
-    
+    print(kwargs)
     if len(kwargs) > 0:
-        for param, value in kwargs:
+        for param, value in kwargs.items():
             optimizer.param_groups[0][param] = value
             
     return optimizer
