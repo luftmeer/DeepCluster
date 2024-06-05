@@ -607,7 +607,7 @@ class DeepCluster(BaseEstimator):
             with open(self.metrics_file, 'w', newline='') as file:
                 if self.metrics_metadata:
                     # Add metadata to further distinguish the different files in the future
-                    file.write(f'#{self.metrics_metadata}')
+                    file.write(f'#{self.metrics_metadata}\n')
                 writer = csv.writer(file)
                 writer.writerow(METRICS_HEADER)
         
