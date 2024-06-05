@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--arch', type=str, choices=['AlexNet', 'VGG16'], default='AlexNet')
     parser.add_argument('--input_dim', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=1000)
-    parser.add_argument('--sobel', action=argparse.BooleanOptionalAction) # --sobel -> active, --no-sobel inactive
+    parser.add_argument('--sobel', action='store_true') # --sobel -> active, --no-sobel inactive
 
     # DeepCluster Model
     parser.add_argument('--epochs', type=int, default=500)
@@ -53,13 +53,13 @@ def parse_args():
     # PCA Reduction
     parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
     parser.add_argument('--pca_reduction', type=int, default=256)
-    parser.add_argument('--pca_whitening', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--pca_whitening', action='store_true')
 
     # Clustering Methid
     parser.add_argument('--clustering', type=str, choices=['sklearn', 'faiss'], default='faiss')
 
     # Metrics
-    parser.add_argument('--metrics', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--metrics', action='store_true')
     parser.add_argument('--metrics_file', type=str, default=None)
 
     # Checkpoints
