@@ -10,7 +10,7 @@ from deepcluster.utils import datasets, optimizer
 
 # Torch
 import torch
-import torchvision
+from torchvision import transforms
 
 # CLI arguments parser
 import argparse
@@ -74,6 +74,8 @@ def parse_args():
     return parser.parse_args()
     
 def main(args):
+    print_selection(args)
+    
     # Dataset loading
     print(f'Loading dataset {args.dataset}')
     train_loader = datasets.dataset_loader(
@@ -138,7 +140,7 @@ def main(args):
     
     # Cluster Assignment Transformer
     ca_tf = datasets.BASE_CA_TRANSFORM.append(datasets.NORMALIZATION[args.dataset])
-    ca_tf = torchvision.transforms.Compose(ca_tf)
+    ca_tf = transforms.Compose(ca_tf)
     
     # Define DeepCluster Model
     DeepCluster_Model = DeepCluster(
@@ -161,7 +163,6 @@ def main(args):
         metrics_file=args.metrics_file,
     )
     
-    print_selection(args)
     
     print('Running model...')
     DeepCluster_Model.fit(train_loader)
