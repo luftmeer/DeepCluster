@@ -139,7 +139,7 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss()
     
     # Cluster Assignment Transformer
-    ca_tf = datasets.BASE_CA_TRANSFORM.append(datasets.NORMALIZATION[args.dataset])
+    ca_tf = datasets.BASE_CA_TRANSFORM
     ca_tf = transforms.Compose(ca_tf)
     
     # Define DeepCluster Model
