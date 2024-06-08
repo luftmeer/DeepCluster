@@ -10,3 +10,4 @@ notebooks/
 # Folders to ignore
 data/ 
 checkpoints/
+metrics/
