@@ -17,7 +17,6 @@ class ActivationMaps:
         else:
             self.reduction_strategy = reduction_strategy
 
-
     def __call__(self, img: Tensor, reduction_strategy=None):
         activations = []
 
@@ -38,7 +37,6 @@ class ActivationMaps:
             self.reduce_all_dimensions(strategy=reduction_strategy)
 
         return self.activations
-
 
     def __len__(self):
         return len(self.activations)
