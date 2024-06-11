@@ -72,7 +72,7 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
     loader = getattr(datasets, dataset_name)
     dataset = loader(
         root=data_dir, 
-        train=True, 
+        train=False, 
         download=True, 
         transform=tf
     )

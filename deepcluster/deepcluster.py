@@ -7,14 +7,14 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-from .utils import faiss_kmeans
-from .utils.benchmarking import Meter
-from .utils.pseudo_labeled_dataset import PseudoLabeledData
+#from utils import faiss_kmeans
+from utils.benchmarking import Meter
+from utils.pseudo_labeled_dataset import PseudoLabeledData
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
 import collections
-import faiss
+#import faiss
 import time
 from datetime import datetime
 import csv
@@ -27,6 +27,7 @@ from sklearn.preprocessing import normalize
 from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 from torcheval.metrics import MulticlassAccuracy
+from clustpy.deep._data_utils import _ClustpyDataset, get_dataloader
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -139,6 +140,10 @@ class DeepCluster(BaseEstimator):
         self.metrics_metadata = metrics_metadata
 
         self.pca_whitening = pca_whitening
+        
+        self.features_per_epoch = []
+        self.centroids_per_epoch = []
+        self.pseudo_labels_per_epoch = []
 
         # Set clustering algorithm
         if self.clustering_method == 'faiss':
@@ -247,26 +252,41 @@ class DeepCluster(BaseEstimator):
 
             # Compute Features
             features = self.compute_features(data)
+            
+            # safe features for later
+            self.features_per_epoch.append(features)
 
             # PCA reduce features
             features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
-            labels = self.apply_clustering(features)
+            labels, centroids = self.apply_clustering(features)
+
+            # safe 
+            self.pseudo_labels_per_epoch.append(labels)
+            self.centroids_per_epoch.append(centroids)
 
             # Create the training data set
-            train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
+            #train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
+            #train_dataset = _ClustpyDataset(data.dataset, labels, self.cluster_assign_transform)
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            sampler = torch.utils.data.RandomSampler(train_dataset)
+            #sampler = torch.utils.data.RandomSampler(train_dataset)
 
             # Create Training Dataset
-            train_data = torch.utils.data.DataLoader(
-                train_dataset,
+            #train_data = torch.utils.data.DataLoader(
+            #    train_dataset,
+            #    batch_size=self.batch_size,
+            #    sampler=sampler,
+            #    pin_memory=True,
+            #)
+            
+            train_data = get_dataloader(
+                data.dataset.data,
                 batch_size=self.batch_size,
-                sampler=sampler,
-                pin_memory=True,
+                additional_inputs=labels,
+                ds_kwargs={"transform": self.cluster_assign_transform}
             )
 
             # Add Top Layer
@@ -503,7 +523,7 @@ class DeepCluster(BaseEstimator):
         if self.metrics:
             self.cluster_time.update(time.time() - end)
 
-        return labels
+        return labels, self.clustering.cluster_centers_
 
     def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
@@ -645,3 +665,7 @@ class DeepCluster(BaseEstimator):
         print(f'- Training time: {self.train_time.sum} [avg: {self.train_time.avg}]')
         print(f'- Epoch time: {self.epoch_time.sum} [avg: {self.epoch_time.avg}]')
         print('-' * 60)
+        
+    def get_features_per_epoch(self):
+        return self.features_per_epoch
+    

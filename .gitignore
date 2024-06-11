@@ -7,6 +7,9 @@ notebooks/
 # pytest
 .coverage
 
+# venv
+venv/
+
 # Folders to ignore
 data/ 
 checkpoints/
