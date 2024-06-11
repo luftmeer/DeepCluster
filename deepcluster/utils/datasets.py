@@ -2,7 +2,7 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.utils import data
 
-AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST']
+AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS']
 BASE_TRANSFORM = [
     transforms.Resize(256), # Resize to the necessary size
     transforms.CenterCrop(224),
@@ -32,6 +32,10 @@ NORMALIZATION = {
     'KMNIST': transforms.Normalize(
         mean=[0.22914791],
         std=[0.3461927]
+    ),
+    'USPS': transforms.Normalize(
+        mean=[0.28959376],
+        std=[0.29546827]
     ),
 }
 
