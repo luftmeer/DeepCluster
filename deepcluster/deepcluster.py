@@ -28,6 +28,7 @@ from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 from torcheval.metrics import MulticlassAccuracy
 from clustpy.deep._data_utils import _ClustpyDataset, get_dataloader
+from PIL import Image
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -254,40 +255,47 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
             
             # safe features for later
-            self.features_per_epoch.append(features)
+            #self.features_per_epoch.append(features)
 
             # PCA reduce features
             features = self.pca_reduction(features)
 
-            # Cluster features and obtain the resulting labels
-            labels, centroids = self.apply_clustering(features)
+            # safe features for later
+            self.features_per_epoch.append(features)
 
-            # safe 
-            self.pseudo_labels_per_epoch.append(labels)
+            # Cluster features and obtain the resulting labels
+            pseudo_labels, centroids = self.apply_clustering(features)
+            print(f"hier {pseudo_labels.shape}")
+
+            # safe s
+            self.pseudo_labels_per_epoch.append(pseudo_labels)
             self.centroids_per_epoch.append(centroids)
 
             # Create the training data set
-            #train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
+            train_dataset = self.create_pseudo_labeled_dataset(data.dataset, pseudo_labels, self.cluster_assign_transform)
             #train_dataset = _ClustpyDataset(data.dataset, labels, self.cluster_assign_transform)
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            #sampler = torch.utils.data.RandomSampler(train_dataset)
+            sampler = torch.utils.data.RandomSampler(train_dataset)
 
             # Create Training Dataset
-            #train_data = torch.utils.data.DataLoader(
-            #    train_dataset,
-            #    batch_size=self.batch_size,
-            #    sampler=sampler,
-            #    pin_memory=True,
-            #)
-            
-            train_data = get_dataloader(
-                data.dataset.data,
+            train_data = torch.utils.data.DataLoader(
+                train_dataset,
                 batch_size=self.batch_size,
-                additional_inputs=labels,
-                ds_kwargs={"transform": self.cluster_assign_transform}
+                sampler=sampler,
+                pin_memory=True,
             )
+
+
+
+
+            #train_data = get_dataloader(
+            #    self.cluster_assign_transform(Image.fromarray(data.dataset.data)),
+            #    batch_size=self.batch_size,
+            #    additional_inputs=labels,
+            #)
+
 
             # Add Top Layer
             classifiers = list(self.model.classifier.children())
@@ -379,6 +387,9 @@ class DeepCluster(BaseEstimator):
             input.requires_grad = True
 
             # Forward pass
+            #print(input.shape)
+            #input = input.unsqueeze(1)
+            #print(input.shape)
             output = self.model(input)
             loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
