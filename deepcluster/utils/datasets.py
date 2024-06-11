@@ -2,21 +2,40 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.utils import data
 
-AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST']
+AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS']
 BASE_TRANSFORM = [
     transforms.Resize(256), # Resize to the necessary size
     transforms.CenterCrop(224),
     transforms.ToTensor()
 ]
 
+# Cluster Assignment base transformation
+BASE_CA_TRANSFORM = [
+    transforms.RandomResizedCrop(224),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor()
+]
+
 NORMALIZATION = {
     'CIFAR10': transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
+        mean=[0.48900422, 0.47554612, 0.4395709,],
+        std=[0.23639396, 0.23279834, 0.24998063]
     ),
     'MNIST': transforms.Normalize(
-        mean=(0.1307,),
-        std=(0.3081,)
+        mean=[0.1703277,],
+        std=[0.3198415,],
+    ),
+    'FashionMNIST': transforms.Normalize(
+        mean=[0.34803212],
+        std=[0.34724548]
+    ),
+    'KMNIST': transforms.Normalize(
+        mean=[0.22914791],
+        std=[0.3461927]
+    ),
+    'USPS': transforms.Normalize(
+        mean=[0.28959376],
+        std=[0.29546827]
     ),
 }
 
