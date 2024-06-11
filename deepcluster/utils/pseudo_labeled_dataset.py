@@ -11,7 +11,7 @@ class PseudoLabeledData(data.Dataset):
     def __init__(self, pseudolabels: list, dataset: torch.utils.data.Dataset, transform: transforms.Compose) -> None:
         self.dataset = self.create_dataset(pseudolabels, dataset)
         self.transform = transform
-        self.targets = pseudolabels # For nmi calculation
+        self.targets = pseudolabels  # For nmi calculation
         
     def create_dataset(self, pseudolabels:list , dataset: torch.utils.data.Dataset) -> list:
         """Creates a new dataset of existing data inputs and newly computated features.

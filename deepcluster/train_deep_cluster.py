@@ -59,7 +59,7 @@ def main():
         clustering_method='sklearn',
     )
 
-    #loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
+    # loader = torch.utils.data.DataLoader(cifar10, batch_size=batch_size)
 
     train_loader = dataset_loader(dataset_name, './data', batch_size)
     
