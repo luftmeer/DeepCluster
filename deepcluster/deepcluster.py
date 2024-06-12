@@ -27,6 +27,7 @@ from sklearn.preprocessing import normalize
 from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 from torcheval.metrics import MulticlassAccuracy
+import pickle
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -245,15 +246,24 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer = None
             self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
 
+            information_storage = []            
             # Compute Features
             features = self.compute_features(data)
-
+            information_storage.extend(features)
             # PCA reduce features
             features = self.pca_reduction(features)
-
+            information_storage.extend(features)
             # Cluster features and obtain the resulting labels
-            labels = self.apply_clustering(features)
-
+            labels, centroids = self.apply_clustering(features)
+            information_storage.extend(labels)
+            information_storage.extend(centroids)
+            
+            print(f'Storing objects')
+            self.save_object(
+                information_storage,
+                filename=f'{datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}_{self.model}_{epoch+1}.pkl'
+            )
+            
             # Create the training data set
             train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
 
@@ -499,11 +509,12 @@ class DeepCluster(BaseEstimator):
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
+            centroids = self.clustering_method.cluster_centers_
 
         if self.metrics:
             self.cluster_time.update(time.time() - end)
 
-        return labels
+        return labels, centroids
 
     def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
@@ -645,3 +656,28 @@ class DeepCluster(BaseEstimator):
         print(f'- Training time: {self.train_time.sum} [avg: {self.train_time.avg}]')
         print(f'- Epoch time: {self.epoch_time.sum} [avg: {self.epoch_time.avg}]')
         print('-' * 60)
+        
+    def save_object(self, objects: object, filename: str):
+        """Wrapper function to export and store data objects on disk in a dedicated object directory.
+
+        Parameters
+        ----------
+        object: object,
+            The object to be stored.
+            
+        filename: str,
+            The files name where the object is stored in.
+        """
+        
+        if not os.path.exists('./objects'):
+            os.makedirs('./objects')
+
+        # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
+        if not os.path.exists('./objects' + '/' + self.dataset_name + '/'):
+            os.makedirs('./objects' + '/' + self.dataset_name + '/')
+            
+        with open('./objects' + '/' + self.dataset_name + '/' + filename, 'wb') as file:
+            pickle.dump(objects, file, pickle.HIGHEST_PROTOCOL)
+        del objects
+        
+        return

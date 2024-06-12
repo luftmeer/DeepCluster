@@ -1,0 +1,49 @@
+Overview Training 5.6. - ..6. 
+s:
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 2 --sobel --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 2 --sobel --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 2 --sobel --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method faiss --clustering faiss;
+python3 main.py --arch AlexNet --input_dim 2 --sobel --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method faiss --clustering faiss;
+
+
+dacit:
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch AlexNet --input_dim 1 --num_classes 10 --batch_size 128 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method sklearn --clustering sklearn;
+
+
+diamiktit:
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method faiss --clustering faiss
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method faiss --clustering faiss;
+
+
+diatomit:
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset MNIST --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl SGD --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer Adam --optimizer_tl Adam --pca_method sklearn --clustering sklearn
+python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --batch_size 32 --epochs 100 --dataset CIFAR10 --metrics -v --optimizer SGD --optimizer_tl Adam --pca_method sklearn --clustering sklearn;
+
+
+- Dataset richtig erstellt (pseudo + daten)
+- Layers visualisieren / Embeddings checken
+- ohne head removal
+- kleinerer datensatz
