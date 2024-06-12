@@ -531,7 +531,6 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
-            self.clustering = KMeans(n_clusters=self.k)
             labels = self.clustering.fit_predict(features)
 
         if self.metrics:
