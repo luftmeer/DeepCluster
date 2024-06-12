@@ -315,6 +315,12 @@ class DeepCluster(BaseEstimator):
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
+            
+            del train_data
+            del features
+            del labels
+            del accuracies
+            del losses
 
     def predict(self, batch: Tensor):
         """
