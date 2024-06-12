@@ -420,7 +420,7 @@ class DeepCluster(BaseEstimator):
         self.model.eval()
         if self.metrics:
             end = time.time()
-        for i, (input, _, idxs) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
+        for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
             input.requires_grad = True
@@ -431,10 +431,10 @@ class DeepCluster(BaseEstimator):
 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
-                features[idxs] = aux
+                features[i * self.batch_size: (i + 1) * self.batch_size] = aux
             else:
                 # Rest of the data
-                features[idxs] = aux
+                features[i * self.batch_size:] = aux
 
             # Free up GPU memory
             del input, aux
