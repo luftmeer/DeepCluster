@@ -277,13 +277,13 @@ class DeepCluster(BaseEstimator):
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            sampler = torch.utils.data.RandomSampler(train_dataset)
+            # sampler = torch.utils.data.RandomSampler(train_dataset)
 
             # Create Training Dataset
             train_data = torch.utils.data.DataLoader(
                 train_dataset,
                 batch_size=self.batch_size,
-                sampler=sampler,
+                #sampler=sampler,
                 pin_memory=True,
             )
 
@@ -374,6 +374,11 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
+        optimizer_tl = torch.optim.SGD(
+            self.model.top_layer.parameters(),
+            lr=0.001,
+            weight_decay=10 ** -5,
+        )
         accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
@@ -387,9 +392,6 @@ class DeepCluster(BaseEstimator):
             input.requires_grad = True
 
             # Forward pass
-            #print(input.shape)
-            #input = input.unsqueeze(1)
-            #print(input.shape)
             output = self.model(input)
             loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
@@ -411,10 +413,10 @@ class DeepCluster(BaseEstimator):
 
             # Backward pass and optimize
             self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
+            optimizer_tl.zero_grad()
             loss.backward()
             self.optimizer.step()
-            self.optimizer_tl.step()
+            optimizer_tl.step()
             
             # Free up GPU memory
             del input, target, output, loss
@@ -529,6 +531,7 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
+            self.clustering = KMeans(n_clusters=self.k)
             labels = self.clustering.fit_predict(features)
 
         if self.metrics:

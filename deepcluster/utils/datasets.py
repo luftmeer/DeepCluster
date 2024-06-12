@@ -2,7 +2,7 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.utils import data
 
-AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS']
+AVAILABLE_DATASETS = ['CIFAR10', 'CIFAR100', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS']
 BASE_TRANSFORM = [
     transforms.Resize(256), # Resize to the necessary size
     transforms.CenterCrop(224),
@@ -18,6 +18,10 @@ BASE_CA_TRANSFORM = [
 
 NORMALIZATION = {
     'CIFAR10': transforms.Normalize(
+        mean=[0.48900422, 0.47554612, 0.4395709,],
+        std=[0.23639396, 0.23279834, 0.24998063]
+    ),
+    'CIFAR100': transforms.Normalize(
         mean=[0.48900422, 0.47554612, 0.4395709,],
         std=[0.23639396, 0.23279834, 0.24998063]
     ),
@@ -47,6 +51,7 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
     dataset_name: str,
         Which dataset to load of the following options:
         - CIFAR10
+        - CIFAR100
         - MNIST
         - FashionMNIST
         - KMNIST
