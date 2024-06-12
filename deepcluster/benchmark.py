@@ -173,7 +173,7 @@ def main(args):
         pca_method=args.clustering_method
     )
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1, dataset=args.dataset)
 
     print("Starting Training...")
     DC_model.fit(train_loader)
