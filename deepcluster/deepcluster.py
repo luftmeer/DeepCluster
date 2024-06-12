@@ -509,7 +509,7 @@ class DeepCluster(BaseEstimator):
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
-            centroids = self.clustering_method.cluster_centers_
+            centroids = self.clustering.cluster_centers_
 
         if self.metrics:
             self.cluster_time.update(time.time() - end)
