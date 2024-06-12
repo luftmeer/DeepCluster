@@ -163,7 +163,8 @@ def main(args):
         cluster_assign_tf=ca_tf,
         epochs=args.epochs,
         dataset_name=DATASET[args.dataset],
-        clustering_method=args.clustering_method
+        clustering_method=args.clustering_method,
+        pca_method=args.clustering_method
     )
 
     train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1)
@@ -210,11 +211,11 @@ if __name__ == '__main__':
                         help='Batch Size.')
     parser.add_argument('--k', type=int, required=True,
                         help='Amount of clusters.')
-    parser.add_argument('--clustering_method', type=int, required=True,
+    parser.add_argument('--clustering_method', type=str, required=True,
                         help='Clustering Method.')
 
     args = parser.parse_args()
     main(args)
 
 # python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method kmeans
-# python3 benchmark.py --dataset cifar100 --algorithm alexnet --epochs 50 --lr 0.001 --batch_size 64 --k 100 --clustering_method kmeans
+# python3 benchmark.py --dataset cifar100 --algorithm alexnet --epochs 50 --lr 0.001 --batch_size 64 --k 100 --clustering_method sklearn
