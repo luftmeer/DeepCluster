@@ -140,12 +140,6 @@ class DeepCluster(BaseEstimator):
         self.metrics_metadata = metrics_metadata
 
         self.pca_whitening = pca_whitening
-
-        # Set clustering algorithm
-        if self.clustering_method == 'faiss':
-            self.clustering = faiss_kmeans.FaissKMeans(self.k)
-        elif self.clustering_method == 'sklearn':
-            self.clustering = KMeans(n_clusters=self.k)
         
         # Init metrics
         if self.metrics:
@@ -241,6 +235,11 @@ class DeepCluster(BaseEstimator):
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
+            # Set clustering algorithm
+            if self.clustering_method == 'faiss':
+                self.clustering = faiss_kmeans.FaissKMeans(self.k)
+            elif self.clustering_method == 'sklearn':
+                self.clustering = KMeans(n_clusters=self.k)
 
             # Remove head
             self.model.top_layer = None
@@ -421,7 +420,7 @@ class DeepCluster(BaseEstimator):
         self.model.eval()
         if self.metrics:
             end = time.time()
-        for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
+        for i, (input, _, idxs) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
             input.requires_grad = True
@@ -432,10 +431,10 @@ class DeepCluster(BaseEstimator):
 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
-                features[i * self.batch_size: (i + 1) * self.batch_size] = aux
+                features[idxs] = aux
             else:
                 # Rest of the data
-                features[i * self.batch_size:] = aux
+                features[idxs] = aux
 
             # Free up GPU memory
             del input, aux

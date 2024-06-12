@@ -41,7 +41,7 @@ class PseudoLabeledData(data.Dataset):
         if isinstance(image, torch.Tensor):
             image = F.to_pil_image(image.to('cpu'))
             image = self.transform(image)
-            return image, pseudolabel
+            return image, pseudolabel, index
         
         with open(image, 'rb') as f:
             img = Image.open(f)
@@ -51,7 +51,7 @@ class PseudoLabeledData(data.Dataset):
         if self.transform:
             img = self.transform(img)
             
-        return img, pseudolabel
+        return img, pseudolabel, index
     
     def __len__(self):
         return len(self.dataset)
