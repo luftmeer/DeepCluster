@@ -27,6 +27,7 @@ ALGORITHMS = {
 
 DATASET = {
     'cifar10': 'CIFAR10',
+    'cifar100': 'CIFAR100',
     'mnist': 'MNIST',
 }
 
@@ -67,6 +68,18 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
             root=data_dir, train=True,
             download=True, transform=transform,
         )
+    elif dataset == 'CIFAR100':
+        transform = Compose(
+            [
+                Resize(256),
+                CenterCrop(224),
+                ToTensor(),
+                Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225]
+                )
+            ]
+        )
 
     print("Done Loading Dataset.")
 
@@ -85,7 +98,7 @@ def main(args):
     algorithm = ALGORITHMS[args.algorithm]
 
     if args.algorithm == 'alexnet':
-        model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
+        model = algorithm(input_dim=2, num_classes=100, sobel=True).to(device)
     elif args.algorithm == 'vgg':
         model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'feedforward':
@@ -120,6 +133,11 @@ def main(args):
     elif args.dataset == 'mnist':
         normalize = Normalize(
             (0.1307,), (0.3081,)
+        )
+    elif args.dataset == 'cifar100':
+        normalize = Normalize(
+            mean=[0.4914, 0.4822, 0.4465],
+            std=[0.2023, 0.1994, 0.2010]
         )
 
     ca_tf = Compose(
@@ -198,4 +216,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss
+# python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method kmeans
+# python3 benchmark.py --dataset cifar100 --algorithm alexnet --epochs 50 --lr 0.001 --batch_size 64 --k 100 --clustering_method kmeans
