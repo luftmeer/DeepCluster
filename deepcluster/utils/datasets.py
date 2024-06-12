@@ -1,8 +1,10 @@
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils import data
+from tinyimagenet import TinyImageNet
+from pathlib import Path
 
-AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS']
+AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS', 'tinyimagenet']
 BASE_TRANSFORM = [
     transforms.Resize(256), # Resize to the necessary size
     transforms.CenterCrop(224),
@@ -37,6 +39,10 @@ NORMALIZATION = {
         mean=[0.28959376],
         std=[0.29546827]
     ),
+    'tinyimagenet': transforms.Normalize(
+        mean=TinyImageNet.mean,
+        std=TinyImageNet.std
+    ),
 }
 
 def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.DataLoader:
@@ -69,18 +75,25 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
     tf.append(NORMALIZATION[dataset_name])
     tf = transforms.Compose(tf)
     print('Loading dataset...')
-    loader = getattr(datasets, dataset_name)
-    dataset = loader(
-        root=data_dir, 
-        train=True, 
-        download=True, 
-        transform=tf
-    )
-    print('Done loading...')
-    
-    train_loader = data.DataLoader(
-        dataset=dataset, 
-        batch_size=batch_size
-    )
+    if dataset_name == 'tinyimagenet':
+        split ="train" # choose from "train", "val", "test"
+        dataset_path=f"{data_dir}/tinyimagenet/"
+        train = TinyImageNet(Path(dataset_path), split=split,transform=tf ,imagenet_idx=True)
+        train_loader = data.DataLoader(train,batch_size=batch_size)
+        
+    else:
+        loader = getattr(datasets, dataset_name)
+        dataset = loader(
+            root=data_dir, 
+            train=True, 
+            download=True, 
+            transform=tf
+        )
+        print('Done loading...')
+        
+        train_loader = data.DataLoader(
+            dataset=dataset, 
+            batch_size=batch_size
+        )
     
     return train_loader
