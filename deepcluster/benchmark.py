@@ -69,6 +69,7 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
             download=True, transform=transform,
         )
     elif dataset == 'CIFAR100':
+        print("loading cifar100")
         transform = Compose(
             [
                 Resize(256),
