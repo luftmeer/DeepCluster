@@ -81,6 +81,11 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
             ]
         )
 
+        train_data = torchvision.datasets.CIFAR100(
+            root=data_dir, train=False,
+            download=True, transform=transform,
+        )
+
     print("Done Loading Dataset.")
 
     train_sampler = RandomSampler(train_data)
