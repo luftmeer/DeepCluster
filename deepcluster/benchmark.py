@@ -173,7 +173,7 @@ def main(args):
         pca_method=args.clustering_method
     )
 
-    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1, dataset='CIFAR100')
+    train_loader = train_validation_data(data_dir='./data', batch_size=batch_size, seed=1, dataset='CIFAR10')
 
     print("Starting Training...")
     DC_model.fit(train_loader)
@@ -224,4 +224,4 @@ if __name__ == '__main__':
     main(args)
 
 # python3 benchmark.py --dataset mnist --algorithm alexnet --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method kmeans
-# python3 benchmark.py --dataset cifar100 --algorithm alexnet --epochs 50 --lr 0.001 --batch_size 64 --k 100 --clustering_method sklearn
+# python3 benchmark.py --dataset cifar10 --algorithm feedforward --epochs 2 --lr 0.001 --batch_size 64 --k 10 --clustering_method sklearn

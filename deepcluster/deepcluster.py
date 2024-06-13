@@ -7,9 +7,9 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-from .utils import faiss_kmeans
-from .utils.benchmarking import Meter
-from .utils.pseudo_labeled_dataset import PseudoLabeledData
+from utils import faiss_kmeans
+from utils.benchmarking import Meter
+from utils.pseudo_labeled_dataset import PseudoLabeledData
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
@@ -347,17 +347,20 @@ class DeepCluster(BaseEstimator):
         self.model.train()
 
         accuracy_metric = MulticlassAccuracy()
-        """self.optimizer_tl = torch.optim.SGD(
-            self.model.top_layer.parameters(),
-            lr=0.001,
-            weight_decay=10 ** -5,
-        )"""
+
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         if self.metrics:
             end = time.time()
 
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+            ## Optimizer initialization
+            self.optimizer_tl = torch.optim.SGD(
+                self.model.top_layer.parameters(),
+                lr=0.001,
+                weight_decay=10 ** -5,
+            )
+
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
