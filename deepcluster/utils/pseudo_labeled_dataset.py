@@ -9,11 +9,11 @@ import numpy as np
 
 class PseudoLabeledData(data.Dataset):
     def __init__(self, pseudolabels: list, dataset: torch.utils.data.Dataset, transform: transforms.Compose) -> None:
-        self.dataset = self.create_dataset(pseudolabels, dataset)
+        self.dataset = dataset
         self.transform = transform
         self.targets = pseudolabels # For nmi calculation
         
-    def create_dataset(self, pseudolabels:list , dataset: torch.utils.data.Dataset) -> list:
+    def create_dataset(self, dataset: torch.utils.data.Dataset) -> list:
         """Creates a new dataset of existing data inputs and newly computated features.
 
         Parameters
@@ -29,15 +29,20 @@ class PseudoLabeledData(data.Dataset):
         list:
             Combined list of image and its computated feature label.
         """
-        images = []
+        """images = np.empty(shape=(len(dataset.data), ))
         for idx, label in tqdm(enumerate(pseudolabels), desc='Creating Training Dataset', total=len(pseudolabels)):
             image = dataset[idx][0]
-            images.append((image, label))
-        
+            images = np.insert(images, idx, (image, label))"""
+        images = []
+        for idx in range(len(dataset.data)):
+            images.append(dataset[idx][0])
+        images = torch.Tensor(images)
+        print(f'{images=}')
         return images
     
     def __getitem__(self, index):
-        image, pseudolabel = self.dataset[index]
+        image = self.dataset[index][0]
+        pseudolabel = self.targets[index]
         if isinstance(image, torch.Tensor):
             image = F.to_pil_image(image.to('cpu'))
             image = self.transform(image)

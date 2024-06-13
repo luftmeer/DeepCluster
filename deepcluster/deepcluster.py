@@ -19,7 +19,6 @@ import time
 from datetime import datetime
 import csv
 
-
 import torch
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
