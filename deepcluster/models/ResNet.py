@@ -72,18 +72,17 @@ class ResNet(nn.Module):
     def __init__(self, block, n_blocks: iter, img_channels: int = 3, num_classes: int = 1000, sobel = False):
         super(ResNet, self).__init__()
         self.in_channels: int = 64
-
-        self.conv1 = nn.Conv2d(img_channels, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(self.in_channels)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.layer1 = self._make_layer(block, 64, n_blocks[0], 1)
-        self.layer2 = self._make_layer(block, 128, n_blocks[1], 2)
-        self.layer3 = self._make_layer(block, 256, n_blocks[2], 2)
-        self.layer4 = self._make_layer(block, 512, n_blocks[3], 2)
-
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.features = nn.Sequential(
+            nn.Conv2d(img_channels, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(self.in_channels),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            self._make_layer(block, 64, n_blocks[0], 1),
+            self._make_layer(block, 128, n_blocks[1], 2),
+            self._make_layer(block, 256, n_blocks[2], 2),
+            self._make_layer(block, 512, n_blocks[3], 2),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        )
         self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
         
         if sobel:
@@ -120,19 +119,10 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x: Tensor) -> Tensor:
+        out = x
         if self.sobel:
-            out = self.sobel(out)
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.maxpool(out)
-
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-
-        out = self.avgpool(out)
+            out = self.sobel(x)
+        out = self.features(out)
         out = out.view(out.size(0), -1)
         out = self.top_layer(out)
 

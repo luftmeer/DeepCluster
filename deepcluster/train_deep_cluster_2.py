@@ -30,7 +30,7 @@ import faiss
 
 class ReassignedDataset(data.Dataset):
     """A dataset where the new images labels are given in argument. This assigns
-    each image withits "pseudolabel"
+    each image with its "pseudolabel"
     Args:
         image_indexes (list): list of data indexes
         pseudolabels (list): list of labels for each data
@@ -65,7 +65,7 @@ class ReassignedDataset(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
-    
+
 class UnifLabelSampler(Sampler):
     """Samples elements uniformely accross pseudolabels.
         Args:

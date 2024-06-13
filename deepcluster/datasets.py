@@ -15,8 +15,8 @@ DATA_PATH = pathlib.Path("../data/imagenet")
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, root: pathlib.Path = DATA_PATH, transform=None, info=False):
-        self.data = tinyimagenet.TinyImageNet(root=root, split="train")
+    def __init__(self, root: pathlib.Path = DATA_PATH, split="test", transform=None, info=False):
+        self.data = tinyimagenet.TinyImageNet(root=root, split=split)
         self.transform = transform
         if info:
             self.print_info()
