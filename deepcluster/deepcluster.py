@@ -156,12 +156,15 @@ class DeepCluster(BaseEstimator):
                 self.metrics_file = metrics_file
             else:
                  # The File the metrics are stored at after each epoch
-                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
+                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
         
         # Placeholder for the best accuracy of a Model at an epoch
         # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
         # Only a current best model will overwrite a previous best model, when the accuracy is greater than the previous one
         self.best_model = 0.
+        
+        if isinstance(self.checkpoint, type(None)):
+            self.checkpoint = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.cpt"
 
     def save_checkpoint(self, epoch: int, best_model: bool=False):
         """Helper Function to continuously store a checkpoint of the current state of the CNN training
@@ -183,7 +186,7 @@ class DeepCluster(BaseEstimator):
         if self.verbose:
             print(f'Saving the current checkpoint at epoch {epoch + 1}..')
 
-        filename = f"{BASE_CPT}/{self.dataset_name}/{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.cpt"
+        filename = f"{BASE_CPT}/{self.dataset_name}/{self.checkpoint}"
         if best_model:
             filename = f'{filename}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
         
