@@ -50,6 +50,7 @@ class DeepCluster(BaseEstimator):
                 verbose: bool = False,  # Verbose output while training
                 pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
                 clustering_method: str = 'faiss',
+                pca: bool = True,
                 pca_method: str = 'faiss',
                 pca_whitening: bool = True,
                 metrics: bool=True,
@@ -125,7 +126,9 @@ class DeepCluster(BaseEstimator):
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.clustering_method = clustering_method
+        self.pca = pca
         self.pca_method = pca_method
+        self.pca_reduction_value = pca_reduction
         self.checkpoint = checkpoint
         self.dataset_name = dataset_name
         self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
@@ -138,12 +141,6 @@ class DeepCluster(BaseEstimator):
         self.metrics_metadata = metrics_metadata
 
         self.pca_whitening = pca_whitening
-
-        # Set clustering algorithm
-        if self.clustering_method == 'faiss':
-            self.clustering = faiss_kmeans.FaissKMeans(self.k)
-        elif self.clustering_method == 'sklearn':
-            self.clustering = KMeans(n_clusters=self.k)
         
         # Init metrics
         if self.metrics:
@@ -236,6 +233,13 @@ class DeepCluster(BaseEstimator):
         if self.metrics:
             end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
+            
+            # Set clustering algorithm
+            if self.clustering_method == 'faiss':
+                self.clustering = faiss_kmeans.FaissKMeans(self.k)
+            elif self.clustering_method == 'sklearn':
+                self.clustering = KMeans(n_clusters=self.k)
+            
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
@@ -248,7 +252,8 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
 
             # PCA reduce features
-            features = self.pca_reduction(features)
+            if self.pca:
+                features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
             labels = self.apply_clustering(features)
@@ -468,13 +473,13 @@ class DeepCluster(BaseEstimator):
                 whitening_value = -0.5
             else:
                 whitening_value = 0.0
-            mat = faiss.PCAMatrix(dim, self.pca, eigen_power=whitening_value)
+            mat = faiss.PCAMatrix(dim, self.pca_reduction_value, eigen_power=whitening_value)
             mat.train(features)
             assert mat.is_trained
             features = mat.apply(features)
 
         elif self.pca_method == 'sklearn':
-            features = PCA(n_components=self.pca, whiten=self.pca_whitening).fit_transform(features)
+            features = PCA(n_components=self.pca_reduction_value, whiten=self.pca_whitening).fit_transform(features)
 
         # L2-normalization
         features = normalize(features, norm='l2')
