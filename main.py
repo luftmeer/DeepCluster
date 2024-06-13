@@ -52,6 +52,7 @@ def parse_args():
     parser.add_argument('--loss_fn', type=str, choices=loss_functions.LOSS_FUNCTIONS, default='CrossEntropy')
 
     # PCA Reduction
+    parser.add_argument('--pca', action='store_true')
     parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
     parser.add_argument('--pca_reduction', type=int, default=256)
     parser.add_argument('--pca_whitening', action='store_true')
@@ -156,6 +157,7 @@ def main(args):
         batch_size=args.batch_size,
         k=args.num_classes,
         verbose=args.verbose,
+        pca=args.pca,
         pca_method=args.pca_method,
         pca_reduction=args.pca_reduction,
         pca_whitening=args.pca_whitening,
