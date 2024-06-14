@@ -398,7 +398,7 @@ class DeepCluster(BaseEstimator):
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
-            input.requires_grad = True
+            #input.requires_grad = True
 
             # Forward pass
             output = self.model(input)
@@ -456,7 +456,7 @@ class DeepCluster(BaseEstimator):
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
-            input.requires_grad = True
+            #input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
 
             if i == 0:
