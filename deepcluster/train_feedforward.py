@@ -28,18 +28,22 @@ DATASET = {
 
 def main(args):
     model: nn.Module = ...
+    in_dim = ...
     mean, std = ..., ...
     train_set = ...
     criterion = torch.nn.CrossEntropyLoss()
     algorithm = ALGORITHMS[args.algorithm]
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Train on device:", device)
 
     if args.algorithm == 'resnet':
         model = algorithm().to(device)
     elif args.algorithm == 'feedforward':
-        model = algorithm(input_dim=224, num_classes=10).to(device)
+        if args.dataset == "mnist":
+            in_dim = (1, 28, 28)
+        elif args.dataset == "cifar10":
+            in_dim = (3, 32, 32)
+        model = algorithm(input_dim=in_dim, num_classes=10).to(device)
 
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
@@ -77,6 +81,10 @@ def main(args):
         ])
         train_set = MNIST(root="./data", train=True, transform=transform)
 
+    train_sampler = torch.utils.data.sampler.RandomSampler(train_set)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, sampler=train_sampler)
+
+
     ca_transform = T.Compose([
         #T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
@@ -99,9 +107,6 @@ def main(args):
         clustering_method=args.clustering_method,
         pca_method=args.clustering_method
     )
-
-    train_sampler = torch.utils.data.sampler.RandomSampler(train_set)
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, sampler=train_sampler)
 
     print("Starting Training...")
     DC_model.fit(train_loader)
