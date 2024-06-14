@@ -55,7 +55,13 @@ class DeepCluster(BaseEstimator):
                 pca_whitening: bool = True,
                 metrics: bool=True,
                 metrics_file: str=None, # Path to metrics csv file, mainly when continuing a previous training after the process stopped 
-                metrics_metadata: str=None
+                metrics_metadata: str=None,
+                reassign_optimizer_tl: bool = False,
+                optim_tl_lr: float = 0.05,
+                optim_tl_momentum: float =0.9,
+                optim_tl_weight_decay: float =10.**-5,
+                optim_tl_beta1: float =0.9,
+                optim_tl_beta2: float =0.999,
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -117,6 +123,12 @@ class DeepCluster(BaseEstimator):
         self.model = model
         self.optimizer = optim
         self.optimizer_tl = optim_tl
+        self.reassign_optimizer_tl = reassign_optimizer_tl
+        self.optim_tl_lr = optim_tl_lr
+        self.optim_tl_momentum = optim_tl_momentum
+        self.optim_tl_weight_decay = optim_tl_weight_decay
+        self.optim_tl_beta1 = optim_tl_beta1
+        self.optim_tl_beta2 = optim_tl_beta2
         self.loss_criterion = loss_criterion
         self.epochs = epochs
         self.batch_size = batch_size
@@ -363,6 +375,23 @@ class DeepCluster(BaseEstimator):
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        
+        if self.reassign_optimizer_tl:
+            if str(self.optimizer_tl).split(' ')[0] == 'SGD':
+                self.optimizer_tl = optim.SGD(
+                    self.model.top_layer.parameters(),
+                    lr=self.optim_tl_lr,
+                    momentum=self.optim_tl_momentum,
+                    weight_decay=self.optim_tl_weight_decay
+                )
+            elif str(self.optimizer_tl).split(' ')[0] == 'Adam':
+                self.optimizer_tl = optim.Adam(
+                    self.model.top_layer.parameters(),
+                    lr = self.optim_tl_lr,
+                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
+                    weight_decay=self.optim_tl_weight_decay
+                )
+        
         if self.metrics:
             end = time.time()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):

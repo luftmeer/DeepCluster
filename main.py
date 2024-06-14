@@ -41,6 +41,7 @@ def parse_args():
     parser.add_argument('--beta2', type=float, choices=range(0, 1), default=0.999) # For Adam
 
     # Optimizer (Top Layer)
+    parser.add_argument('--reassign_optimizer_tl', action='store_true')
     parser.add_argument('--optimizer_tl', type=str, choices=optimizer.OPTIMIZERS, default='SGD')
     parser.add_argument('--lr_tl', type=float, choices=range(0, 1), default=0.05)
     parser.add_argument('--momentum_tl', type=float, choices=range(0, 1), default=0.9)
@@ -148,7 +149,13 @@ def main(args):
     DeepCluster_Model = DeepCluster(
         model=model,
         optim=model_optimizer,
+        reassign_optimizer_tl=args.reassign_optimizer_tl,
         optim_tl=tl_optimizer,
+        optim_tl_lr=args.lr_tl,
+        optim_tl_momentum=args.momentum_tl,
+        optim_tl_weight_decay=args.weight_decay_tl,
+        optim_tl_beta1=args.beta1_tl,
+        optim_tl_beta2=args.beta2_tl,
         loss_criterion=loss_fn,
         cluster_assign_tf=ca_tf,
         dataset_name=args.dataset,
