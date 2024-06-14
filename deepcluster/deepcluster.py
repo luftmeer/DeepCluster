@@ -238,6 +238,7 @@ class DeepCluster(BaseEstimator):
         fd = int(self.model.top_layer.weight.size()[1])
         if self.metrics:
             end = time.time()
+
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
@@ -417,18 +418,20 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
+
         if self.metrics:
             end = time.time()
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
-
             input.requires_grad = True
+
             aux = self.model(input).data.cpu().numpy()
 
             if i == 0:
                 features = np.zeros((len(data.dataset), aux.shape[1]), dtype=np.float32)
 
             aux = aux.astype(np.float32)
+
             if i < len(data) - 1:
                 features[i * self.batch_size: (i + 1) * self.batch_size] = aux
             else:

@@ -1,19 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.optim
-
+from torchvision.transforms import transforms as T
 from torchvision.datasets import MNIST, CIFAR10
 from torch.utils.data import DataLoader
-from torchvision.transforms import transforms as T
 
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import argparse
 
 from DeepCluster.deepcluster.models.FeedForward import FeedForward
 from DeepCluster.deepcluster.models.ResNet import resnet18
-
 from DeepCluster.deepcluster.deepcluster import DeepCluster
 
 
@@ -61,8 +59,8 @@ def main(args):
         mean = [0.4914, 0.4822, 0.4465],
         std = [0.2023, 0.1994, 0.2010]
         transform = T.Compose([
-            T.Resize(224),
-            T.CenterCrop(224),
+            #T.Resize(224),
+            #T.CenterCrop(224),
             T.ToTensor(),
             T.Normalize(mean=mean, std=std)
         ])
@@ -72,15 +70,15 @@ def main(args):
         mean = (0.1307,)
         std = (0.3081,)
         transform = T.Compose([
-            T.Resize(224),
-            T.CenterCrop(224),
+            #T.Resize(224),
+            #T.CenterCrop(224),
             T.ToTensor(),
             T.Normalize(mean=mean, std=std)
         ])
         train_set = MNIST(root="./data", train=True, transform=transform)
 
     ca_transform = T.Compose([
-        T.RandomResizedCrop(224),
+        #T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
         T.ToTensor(),
         T.Normalize(mean=mean, std=std)
