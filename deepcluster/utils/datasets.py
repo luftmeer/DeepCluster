@@ -43,7 +43,7 @@ NORMALIZATION = {
         mean=TinyImageNet.mean,
         std=TinyImageNet.std
     ),
-    'tinyimagenet': transforms.Normalize(
+    'STL10': transforms.Normalize(
         mean=[0.45170662, 0.44098967, 0.4087977,4],
         std=[0.2507095, 0.24678938, 0.26186305]
     ),
