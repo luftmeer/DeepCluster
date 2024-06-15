@@ -4,7 +4,7 @@ from torch.utils import data
 from tinyimagenet import TinyImageNet
 from pathlib import Path
 
-AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS', 'tinyimagenet']
+AVAILABLE_DATASETS = ['CIFAR10', 'MNIST', 'FashionMNIST', 'KMNIST', 'USPS', 'tinyimagenet', 'STL10']
 BASE_TRANSFORM = [
     transforms.Resize(256), # Resize to the necessary size
     transforms.CenterCrop(224),
@@ -43,6 +43,10 @@ NORMALIZATION = {
         mean=TinyImageNet.mean,
         std=TinyImageNet.std
     ),
+    'tinyimagenet': transforms.Normalize(
+        mean=[0.45170662, 0.44098967, 0.4087977,4],
+        std=[0.2507095, 0.24678938, 0.26186305]
+    ),
 }
 
 def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.DataLoader:
@@ -80,7 +84,6 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
         dataset_path=f"{data_dir}/tinyimagenet/"
         train = TinyImageNet(Path(dataset_path), split=split,transform=tf ,imagenet_idx=True)
         train_loader = data.DataLoader(train,batch_size=batch_size)
-        
     else:
         loader = getattr(datasets, dataset_name)
         dataset = loader(
