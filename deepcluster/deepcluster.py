@@ -308,7 +308,11 @@ class DeepCluster(BaseEstimator):
                 end = time.time()
                 
             # Print the results of this epoch
-            self.print_results(epoch, losses, accuracies, train_data.dataset.targets, data.dataset.targets)
+            if self.dataset_name == 'STL10':
+                target_labels = [0] * len(data.dataset.data)
+            else:
+                target_labels = data.dataset.targets
+            self.print_results(epoch, losses, accuracies, train_data.dataset.targets, target_labels)
 
             # Store psuedo-labels
             self.cluster_logs.append(train_data.dataset.targets)
