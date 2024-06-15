@@ -84,6 +84,13 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
         dataset_path=f"{data_dir}/tinyimagenet/"
         train = TinyImageNet(Path(dataset_path), split=split,transform=tf ,imagenet_idx=True)
         train_loader = data.DataLoader(train,batch_size=batch_size)
+    elif dataset_name == 'STL10':
+        dataset = datasets.STL10(
+            root=data_dir,
+            split='train',
+            transform=tf,
+            download=True
+)
     else:
         loader = getattr(datasets, dataset_name)
         dataset = loader(
