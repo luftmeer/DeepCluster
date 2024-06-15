@@ -87,7 +87,7 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int) -> data.Da
     elif dataset_name == 'STL10':
         dataset = datasets.STL10(
             root=data_dir,
-            split='train',
+            split='unlabeled',
             transform=tf,
             download=True
 )
