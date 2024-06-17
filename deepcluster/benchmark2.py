@@ -52,6 +52,7 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
             download=True, transform=transform,
         )
     elif dataset == 'MNIST':
+        print("verwenden mnist")
         transform = Compose(
             [
                 Resize((32, 32)),
@@ -94,7 +95,9 @@ def main(args):
         model = algorithm(input_dim=train_loader.dataset[0][0].shape[0], num_classes=10, sobel=False,
                           input_size=train_loader.dataset[0][0].shape[1]).to(device)
     elif args.algorithm == 'feedforward':
+        print('im feedforward')
         model = algorithm(input_dim=32 * 32, num_classes=10).to(device)
+        print(model)
 
     # Optimizer
     optimizer = torch.optim.SGD(
@@ -134,4 +137,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 1 --lr 0.01 --batch_size 64 --k 10
+# python3 benchmark2.py --dataset mnist --algorithm feedforward --epochs 2 --lr 0.01 --batch_size 64 --k 10

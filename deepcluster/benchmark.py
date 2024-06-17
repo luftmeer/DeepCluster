@@ -52,6 +52,7 @@ def train_validation_data(data_dir: str, batch_size: int, seed: int, dataset: st
             download=True, transform=transform,
         )
     elif dataset == 'MNIST':
+        print('wir verwenden MNIST')
         transform = Compose(
             [
                 Resize(256),
@@ -89,6 +90,7 @@ def main(args):
     elif args.algorithm == 'vgg':
         model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'feedforward':
+        print('wir verwenden FeedForward')
         model = algorithm(input_dim=224*224, num_classes=10).to(device)
 
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -118,6 +120,7 @@ def main(args):
             std=[0.2023, 0.1994, 0.2010]
         )
     elif args.dataset == 'mnist':
+        print('auch hier mnist')
         normalize = Normalize(
             (0.1307,), (0.3081,)
         )
@@ -176,7 +179,7 @@ def main(args):
     df = pd.DataFrame(metrics)
 
     print(df)
-    df.to_csv('training_metrics.csv', index=False)
+    df.to_csv('ff_lr0.001_mnist_original_implementation.csv', index=False)
 
 
 if __name__ == '__main__':
@@ -199,4 +202,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 1 --lr 0.01 --batch_size 64 --k 10 --clustering_method faiss
+# python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 10 --lr 0.001 --batch_size 64 --k 10 --clustering_method sklearn

@@ -7,9 +7,9 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-from .utils import faiss_kmeans
-from .utils.benchmarking import Meter
-from .utils.pseudo_labeled_dataset import PseudoLabeledData
+from utils import faiss_kmeans
+from utils.benchmarking import Meter
+from utils.pseudo_labeled_dataset import PseudoLabeledData
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
@@ -502,6 +502,8 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
+            print('we kmeaaaan')
+            self.clustering = KMeans(n_clusters=self.k)
             labels = self.clustering.fit_predict(features)
 
         if self.metrics:
