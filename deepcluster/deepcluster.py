@@ -43,6 +43,8 @@ class DeepCluster(BaseEstimator):
                 loss_criterion: object,  # PyTorch Loss Function
                 cluster_assign_tf: transforms,
                 dataset_name: str,  # Name of the dataset when saving checkpoints
+                requires_grad: bool = False,
+                reassign_clustering: bool = False,
                 checkpoint: str = None,  # Direct path to the checkpoint
                 epochs: int = 500,  # Training Epoch
                 batch_size: int = 256,
@@ -121,6 +123,7 @@ class DeepCluster(BaseEstimator):
             If set to True, the PCA reduction method will whiten the reduced dataset.
         """
         self.model = model
+        self.requires_grad = requires_grad
         self.optimizer = optim
         self.optimizer_tl = optim_tl
         self.reassign_optimizer_tl = reassign_optimizer_tl
@@ -137,6 +140,7 @@ class DeepCluster(BaseEstimator):
         self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.reassign_clustering = reassign_clustering
         self.clustering_method = clustering_method
         self.pca = pca
         self.pca_method = pca_method
@@ -169,6 +173,12 @@ class DeepCluster(BaseEstimator):
             else:
                  # The File the metrics are stored at after each epoch
                 self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
+        
+        # Set initial Clustering
+        if self.clustering_method == 'faiss':
+            self.clustering = faiss_kmeans.FaissKMeans(self.k)
+        elif self.clustering_method == 'sklearn':
+            self.clustering = KMeans(n_clusters=self.k)
         
         # Placeholder for the best accuracy of a Model at an epoch
         # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
@@ -250,10 +260,11 @@ class DeepCluster(BaseEstimator):
         for epoch in range(self.start_epoch, self.epochs):
             
             # Set clustering algorithm
-            if self.clustering_method == 'faiss':
-                self.clustering = faiss_kmeans.FaissKMeans(self.k)
-            elif self.clustering_method == 'sklearn':
-                self.clustering = KMeans(n_clusters=self.k)
+            if self.reassign_clustering:
+                if self.clustering_method == 'faiss':
+                    self.clustering = faiss_kmeans.FaissKMeans(self.k)
+                elif self.clustering_method == 'sklearn':
+                    self.clustering = KMeans(n_clusters=self.k)
             
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
@@ -402,7 +413,8 @@ class DeepCluster(BaseEstimator):
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
-            #input.requires_grad = True
+            if self.requires_grad:
+                input.requires_grad = True
 
             # Forward pass
             output = self.model(input)
@@ -460,7 +472,8 @@ class DeepCluster(BaseEstimator):
         for i, (input, _) in tqdm(enumerate(data), desc='Computing Features', total=len(data)):
             input = input.to(self.device)
 
-            #input.requires_grad = True
+            if self.requires_grad:
+                input.requires_grad = True
             aux = self.model(input).data.cpu().numpy()
 
             if i == 0:

@@ -22,7 +22,8 @@ def parse_args():
     parser.add_argument('--arch', type=str, choices=['AlexNet', 'VGG16'], default='AlexNet')
     parser.add_argument('--input_dim', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=1000)
-    parser.add_argument('--sobel', action='store_true') # --sobel -> active, --no-sobel inactive
+    parser.add_argument('--sobel', action='store_true')
+    parser.add_argument('--requires_grad', action='store_true')
 
     # DeepCluster Model
     parser.add_argument('--epochs', type=int, default=500)
@@ -59,6 +60,7 @@ def parse_args():
     parser.add_argument('--pca_whitening', action='store_true')
 
     # Clustering Methid
+    parser.add_argument('--reassign_clustering', action='store_true')
     parser.add_argument('--clustering', type=str, choices=['sklearn', 'faiss'], default='faiss')
 
     # Metrics
@@ -148,8 +150,10 @@ def main(args):
     # Define DeepCluster Model
     DeepCluster_Model = DeepCluster(
         model=model,
+        requires_grad=args.requires_grad,
         optim=model_optimizer,
         reassign_optimizer_tl=args.reassign_optimizer_tl,
+        reassign_clustering=args.reassign_clustering,
         optim_tl=tl_optimizer,
         optim_tl_lr=args.lr_tl,
         optim_tl_momentum=args.momentum_tl,
