@@ -108,7 +108,6 @@ class VGG16(nn.Module):
             self.sobel.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
             self.sobel.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
             self.sobel.bias.data.zero_()
-            self.sobel = nn.Sequential(grayscale, filter)
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
 
