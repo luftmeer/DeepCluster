@@ -2,7 +2,7 @@ from torch import nn
 import torch
 
 class AlexNet(nn.Module):
-    def __init__(self, input_dim: int=3, num_classes: int=1000, sobel: bool=True):
+    def __init__(self, input_dim: int=3, num_classes: int=1000, grayscale: bool=True, sobel: bool=True):
         """Base AlexNet implementation based on the paper "ImageNet Classification with Deep Convolutional Neural Networks" by A. Krizhevsky, I. Sutskever, and G. E. Hinton at NeurIPS 2012
 
         The Convolutional Neural Network consists of 5 feature layers and 3 classification layers.
@@ -57,21 +57,32 @@ class AlexNet(nn.Module):
         
         self.top_layer = nn.Linear(4096, num_classes)
         
+        # Define grayscale Filter
+        self.grayscale = None
+        if grayscale:
+            self.grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
+            self.grayscale.weight.data.fill_(1.0 / 3.0)
+            self.grayscale.bias.data.zero_()
+            for parameter in self.grayscale.parameters():
+                parameter.require_grad = False
+        
         # Define Sobel Filter
         self.sobel = None
         if sobel:
-            grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
-            grayscale.weight.data.fill_(1.0 / 3.0)
-            grayscale.bias.data.zero_()
-            filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
-            filter.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
-            filter.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
-            filter.bias.data.zero_()
+            self.sobel = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
+            self.sobel.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
+            self.sobel.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
+            self.sobel.bias.data.zero_()
             self.sobel = nn.Sequential(grayscale, filter)
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
 
     def forward(self, X: torch.Tensor):
+            if self.grayscale:
+                X = self.grayscale(X)
+            if self.grayscale and torch.isnan(X).any():
+                print("NaN values found after sobel")    
+            
             if self.sobel:
                 X = self.sobel(X)
             if self.sobel and torch.isnan(X).any():

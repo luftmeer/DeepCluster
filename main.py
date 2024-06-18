@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument('--input_dim', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=1000)
     parser.add_argument('--sobel', action='store_true')
+    parser.add_argument('--grayscale', action='store_true')
     parser.add_argument('--requires_grad', action='store_true')
 
     # DeepCluster Model
@@ -93,9 +94,9 @@ def main(args):
     # Model Loading
     print('Loading Model...')
     if args.arch == 'AlexNet':
-        model = AlexNet(input_dim=args.input_dim, num_classes=args.num_classes, sobel=args.sobel)
+        model = AlexNet(input_dim=args.input_dim, num_classes=args.num_classes, grayscale=args.grayscale, sobel=args.sobel)
     elif args.arch == 'VGG16':
-        model = VGG16(input_dim=args.input_dim, num_classes=args.num_classes, sobel=args.sobel)
+        model = VGG16(input_dim=args.input_dim, num_classes=args.num_classes, grayscale=args.grayscale, sobel=args.sobel)
     print('Model Loaded...')
     
     # Main Optimizer Loading

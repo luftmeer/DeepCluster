@@ -2,7 +2,7 @@ from torch import nn
 import torch
 
 class VGG16(nn.Module):
-    def __init__(self, num_classes=1000, input_dim: int=3, input_size=28, sobel: bool=True):
+    def __init__(self, num_classes=1000, input_dim: int=3, input_size=28, grayscale: bool=True, sobel: bool=True):
         """VGG-16 implementation based on the paper Very Deep Convolutional Networks for Large-Scale Image Recognition" by K. Simonyan, and A. Zisserman (https://arxiv.org/abs/1409.1556)
 
         The Convolutional Neural Network consists of 135 feature layers and 3 classification layers.
@@ -92,16 +92,22 @@ class VGG16(nn.Module):
         # 16th Layer
         self.top_layer = nn.Linear(4096, num_classes)
         
+        # Define grayscale Filter
+        self.grayscale = None
+        if grayscale:
+            self.grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
+            self.grayscale.weight.data.fill_(1.0 / 3.0)
+            self.grayscale.bias.data.zero_()
+            for parameter in self.grayscale.parameters():
+                parameter.require_grad = False
+        
         # Define Sobel Filter
         self.sobel = None
         if sobel:
-            grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
-            grayscale.weight.data.fill_(1.0 / 3.0)
-            grayscale.bias.data.zero_()
-            filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
-            filter.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
-            filter.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
-            filter.bias.data.zero_()
+            self.sobel = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
+            self.sobel.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
+            self.sobel.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
+            self.sobel.bias.data.zero_()
             self.sobel = nn.Sequential(grayscale, filter)
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
@@ -120,6 +126,8 @@ class VGG16(nn.Module):
             torch.Tensor
                 #TODO tbd
         """
+        if self.grayscale:
+            X = self.grayscale(X)
         if self.sobel:
             X = self.sobel(X)
         X = self.features(X)
