@@ -41,6 +41,7 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, choices=range(0, 1), default=10**-5)
     parser.add_argument('--beta1', type=float, choices=range(0, 1), default=0.9) # For Adam
     parser.add_argument('--beta2', type=float, choices=range(0, 1), default=0.999) # For Adam
+    parser.add_argument('--param_requires_grad', action='store_true')
 
     # Optimizer (Top Layer)
     parser.add_argument('--reassign_optimizer_tl', action='store_true')
@@ -101,10 +102,14 @@ def main(args):
     
     # Main Optimizer Loading
     print('Creating main model Optimizer...')
+    if args.param_requires_grad:
+        parameters = filter(lambda x: x.requires_grad, model.parameters())
+    else:
+        parameters = model.parameters()
     if args.optimizer == 'SGD':
         model_optimizer = optimizer.optimizer_loader(
             optimizer_name=args.optimizer, 
-            parameter=filter(lambda x: x.requires_grad, model.parameters()), 
+            parameter=parameters,
             lr=args.lr,
             momentum=args.momentum,
             weight_decay=args.weight_decay,    
