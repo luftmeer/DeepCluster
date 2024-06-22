@@ -137,6 +137,7 @@ class DeepCluster(BaseEstimator):
         self.execution_time = []
         self.metrics = metrics
         self.metrics_metadata = metrics_metadata
+        self.centroids_last_epoch = []
 
         self.pca_whitening = pca_whitening
 
@@ -242,8 +243,8 @@ class DeepCluster(BaseEstimator):
 
 
             # Remove head
-            self.model.top_layer = None
-            self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
+            # self.model.top_layer = None
+            #self.model.classifier = nn.Sequential(*list(self.model.classifier.children())[:-1])
 
             # Compute Features
             print('before features computing')
@@ -274,13 +275,16 @@ class DeepCluster(BaseEstimator):
             )
 
             # Add Top Layer
-            classifiers = list(self.model.classifier.children())
-            classifiers.append(nn.ReLU(inplace=True).to(self.device))
-            self.model.classifier = nn.Sequential(*classifiers)
-            self.model.top_layer = nn.Linear(fd, self.k)
-            self.model.top_layer.weight.data.normal_(0, 0.01)
-            self.model.top_layer.bias.data.zero_()
-            self.model.top_layer.to(self.device)
+            # classifiers = list(self.model.classifier.children())
+            # classifiers.append(nn.ReLU(inplace=True).to(self.device))
+            # self.model.classifier = nn.Sequential(*classifiers)
+            # top_layer = list(self.model.top_layer.children())
+            # self.model.top_layer = nn.Sequential(*top_layer)
+            # TODO: remove second optimzer
+            # self.model.top_layer = nn.Linear(fd, self.k)
+            # self.model.top_layer.weight.data.normal_(0, 0.01)
+            # self.model.top_layer.bias.data.zero_()
+            # self.model.top_layer.to(self.device)
 
             losses, accuracies = self.train(train_data)
             if self.metrics:
@@ -354,6 +358,19 @@ class DeepCluster(BaseEstimator):
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        # self.optimizer = torch.optim.SGD(
+        #     filter(lambda x: x.requires_grad, self.model.parameters()),
+        #     lr=0.001,
+        #     momentum=0.9,
+        #     weight_decay=10 ** -5,
+        # )
+        #
+        # # Optimizer_TL
+        # self.optimizer_tl = torch.optim.SGD(
+        #     self.model.top_layer.parameters(),
+        #     lr=0.001,
+        #     weight_decay=10 ** -5,
+        # )
         if self.metrics:
             end = time.time()
         for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
@@ -384,10 +401,10 @@ class DeepCluster(BaseEstimator):
 
             # Backward pass and optimize
             self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
+            #self.optimizer_tl.zero_grad()
             loss.backward()
             self.optimizer.step()
-            self.optimizer_tl.step()
+            #self.optimizer_tl.step()
             
             # Free up GPU memory
             del input, target, output, loss
@@ -502,9 +519,11 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
-            print('we kmeaaaan')
-            self.clustering = KMeans(n_clusters=self.k)
+            # print('we kmeaaaan fr')
+            # self.clustering = KMeans(n_clusters=self.k)
+            # take avg centroids from last epoch now
             labels = self.clustering.fit_predict(features)
+            #self.centroids_last_epoch.append(labels)
 
         if self.metrics:
             self.cluster_time.update(time.time() - end)

@@ -88,7 +88,8 @@ def main(args):
     if args.algorithm == 'alexnet':
         model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'vgg':
-        model = algorithm(input_dim=2, num_classes=10, sobel=True).to(device)
+        #model = algorithm(input_dim=1, num_classes=10, sobel=True).to(device)
+        model = VGG16(input_dim=2, num_classes=10, sobel=True).to(device)
     elif args.algorithm == 'feedforward':
         print('wir verwenden FeedForward')
         model = algorithm(input_dim=224*224, num_classes=10).to(device)
@@ -203,3 +204,5 @@ if __name__ == '__main__':
     main(args)
 
 # python3 benchmark.py --dataset mnist --algorithm feedforward --epochs 10 --lr 0.001 --batch_size 64 --k 10 --clustering_method sklearn
+# python3 benchmark.py --dataset mnist --algorithm vgg --epochs 4 --lr 0.001 --batch_size 64 --k 10 --clustering_method sklearn
+# python3 benchmark.py --dataset cifar10 --algorithm vgg --epochs 4 --lr 0.001 --batch_size 64 --k 10 --clustering_method sklearn

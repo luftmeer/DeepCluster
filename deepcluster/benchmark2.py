@@ -137,4 +137,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-# python3 benchmark2.py --dataset mnist --algorithm feedforward --epochs 2 --lr 0.01 --batch_size 64 --k 10
+# python3 benchmark2.py --dataset mnist --algorithm feedforward --epochs 10 --lr 0.001 --batch_size 64 --k 10
