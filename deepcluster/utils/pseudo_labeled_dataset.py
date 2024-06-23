@@ -41,12 +41,12 @@ class PseudoLabeledData(data.Dataset):
         return images
     
     def __getitem__(self, index):
-        image = self.dataset[index][0]
+        image, true_target = self.dataset[index]
         pseudolabel = self.targets[index]
         if isinstance(image, torch.Tensor):
             image = F.to_pil_image(image.to('cpu'))
             image = self.transform(image)
-            return image, pseudolabel
+            return image, pseudolabel, true_target
         
         with open(image, 'rb') as f:
             img = Image.open(f)
