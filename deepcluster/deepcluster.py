@@ -32,7 +32,7 @@ BASE_CPT = './checkpoints/'
 # Base folder for metrics
 BASE_METRICS = './metrics/'
 # Metrics Header
-METRICS_HEADER = ['epoch', 'loss_avg', 'accuracy', 'nmi_true_ped', 'nmi_epochs', 'epoch_time', 'train_time', 'features_time', 'cluster_time', 'pca_time']
+METRICS_HEADER = ['epoch', 'loss_avg', 'accuracy', 'true_accuracy', 'nmi_true_ped', 'nmi_epochs', 'epoch_time', 'train_time', 'features_time', 'cluster_time', 'pca_time']
 
 class DeepCluster(BaseEstimator):
     def __init__(
@@ -164,6 +164,7 @@ class DeepCluster(BaseEstimator):
             self.train_time = Meter()
             self.loss_overall_avg = Meter()
             self.accuracy_overall_avg = Meter()
+            self.true_accuracy_overall_avg = Meter()
             self.features_time = Meter()
             self.cluster_time = Meter()
             self.pca_time = Meter()
@@ -308,10 +309,11 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            losses, accuracies = self.train(train_data)
+            losses, pred_accuracy, true_accuracy = self.train(train_data)
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
-                self.accuracy_overall_avg.update(torch.mean(accuracies))
+                self.accuracy_overall_avg.update(pred_accuracy)
+                self.true_accuracy_overall_avg.update(true_accuracy)
 
             # Epoch Metrics
             if self.metrics:
@@ -323,7 +325,7 @@ class DeepCluster(BaseEstimator):
                 target_labels = [0] * len(data.dataset.data)
             else:
                 target_labels = data.dataset.targets
-            self.print_results(epoch, losses, accuracies, train_data.dataset.targets, target_labels)
+            self.print_results(epoch, losses, pred_accuracy, true_accuracy, train_data.dataset.targets, target_labels)
 
             # Store psuedo-labels
             self.cluster_logs.append(train_data.dataset.targets)
@@ -339,12 +341,12 @@ class DeepCluster(BaseEstimator):
                 self.train_time.reset()
                 self.epoch_time.reset()
             # Store a best model:
-            if self.best_model < torch.mean(accuracies).numpy():
+            if self.best_model < pred_accuracy.numpy():
                 print(f'A new best model has been found:')
                 print(f'- Previous model: {self.best_model}')
-                print(f'- Current model: {torch.mean(accuracies).numpy()}')
+                print(f'- Current model: {pred_accuracy.numpy()}')
                 self.save_checkpoint(epoch=epoch, best_model=True)
-                self.best_model = torch.mean(accuracies).numpy()
+                self.best_model = pred_accuracy.numpy()
             
             if self.verbose: print('Creating new checkpoint..')
             self.save_checkpoint(epoch)
@@ -353,7 +355,8 @@ class DeepCluster(BaseEstimator):
             del train_data
             del features
             del labels
-            del accuracies
+            del pred_accuracy
+            del true_accuracy
             del losses
 
     def predict(self, batch: Tensor):
@@ -387,6 +390,7 @@ class DeepCluster(BaseEstimator):
         self.model.train()
 
         accuracy_metric = MulticlassAccuracy()
+        true_accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
@@ -409,7 +413,7 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
-        for i, (input, target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+        for i, (input, target, true_target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
@@ -420,6 +424,7 @@ class DeepCluster(BaseEstimator):
             output = self.model(input)
             loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
+            true_accuracy_metric.update(output, true_target)
             # check Nan Loss
             if torch.isnan(loss):
                 print("targets", target)
@@ -434,7 +439,7 @@ class DeepCluster(BaseEstimator):
 
             # calculate accuracy and add it to accuracies tensor
             _, predicted = output.max(1)
-            accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
+            #accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
 
             # Backward pass and optimize
             self.optimizer.zero_grad()
@@ -452,7 +457,8 @@ class DeepCluster(BaseEstimator):
                 self.train_time.update(time.time() - end)
                 end = time.time()
         print(f'Accuracy Torcheval: {accuracy_metric.compute()=}')
-        return losses, accuracies
+        # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
+        return losses, accuracy_metric.compute(), true_accuracy_metric.compute()
 
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
@@ -578,7 +584,7 @@ class DeepCluster(BaseEstimator):
         """
         return PseudoLabeledData(labels, dataset, transform)
 
-    def print_results(self, epoch: int, losses: torch.Tensor, accuracies: torch.Tensor, pseudo_labels: list, dataset_labels: np.ndarray):
+    def print_results(self, epoch: int, losses: torch.Tensor, pred_accuracy: torch.Tensor, true_accuracy: torch.Tensor, pseudo_labels: list, dataset_labels: np.ndarray):
         """Function for better overview when printing epoch results after the training process has been completed.
 
         Parameters
@@ -602,8 +608,9 @@ class DeepCluster(BaseEstimator):
         print(f"Average loss: {torch.mean(losses)}")
         self.train_losses.append(torch.mean(losses).item())
 
-        print(f"Accuracy: {torch.mean(accuracies)}")
-        self.train_accuracies.append(torch.mean(accuracies).item())
+        print(f"Pseudo vs Predicted Labels Accuracy: {pred_accuracy}")
+        print(f"True vs Predicted Labels Accuracy: {true_accuracy}")
+        self.train_accuracies.append(pred_accuracy.item())
         print("-" * 50)
 
         print('Normalized Mutual Information Scores:')
@@ -683,6 +690,7 @@ class DeepCluster(BaseEstimator):
                 epoch, 
                 torch.mean(self.loss_overall_avg.val).numpy(),
                 torch.mean(self.accuracy_overall_avg.val).numpy(),
+                torch.mean(self.true_accuracy_overall_avg.val).numpy(),
                 nmi,
                 nmi_epoch,
                 self.epoch_time.sum,
