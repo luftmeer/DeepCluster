@@ -20,7 +20,7 @@ BASE_CA_TRANSFORM = [
 
 NORMALIZATION = {
     'CIFAR10': transforms.Normalize(
-        mean=[0.48900422, 0.47554612, 0.4395709,],
+        mean=[0.48900422, 0.47554612, 0.4395709],
         std=[0.23639396, 0.23279834, 0.24998063]
     ),
     'MNIST': transforms.Normalize(
