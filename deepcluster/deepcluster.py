@@ -335,7 +335,11 @@ class DeepCluster(BaseEstimator):
                 target_labels = [0] * len(data.dataset.data)
             else:
                 target_labels = data.dataset.targets
-            self.print_results(epoch, losses, pred_accuracy, true_accuracy, train_data.dataset.targets, target_labels)
+            
+            if self.clustering_method == 'faiss':
+                self.print_results(epoch, losses, pred_accuracy, 0.0, train_data.dataset.targets, target_labels)
+            else:
+                self.print_results(epoch, losses, pred_accuracy, true_accuracy, train_data.dataset.targets, target_labels)
 
             # Store psuedo-labels
             self.cluster_logs.append(train_data.dataset.targets)
