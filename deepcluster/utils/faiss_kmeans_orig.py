@@ -50,10 +50,13 @@ class ReassignedDataset(data.Dataset):
     def make_dataset(self, image_indexes, pseudolabels, dataset):
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
+        targets = []
         for j, idx in enumerate(image_indexes):
             path = dataset[idx]
             pseudolabel = label_to_idx[pseudolabels[j]]
             images.append((path, pseudolabel))
+            targets.append(pseudolabel)
+        self.targets = targets
         return images
 
     def __getitem__(self, index):

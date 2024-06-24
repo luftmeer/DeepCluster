@@ -288,7 +288,7 @@ class DeepCluster(BaseEstimator):
             labels = self.apply_clustering(features)
 
             # Create the training data set
-            if self.clustering_method is not 'faiss':
+            if self.clustering_method != 'faiss':
                 train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
             elif self.clustering_method == 'faiss':
                 train_dataset = faiss_kmeans_orig.cluster_assign(self.clustering.images_lists, data.dataset.data)
@@ -359,7 +359,8 @@ class DeepCluster(BaseEstimator):
             
             del train_data
             del features
-            del labels
+            if self.clustering_method != 'faiss':
+                del labels
             del pred_accuracy
             del true_accuracy
             del losses
@@ -569,6 +570,7 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss':
             #labels = self.clustering.fit(features)
             _ = self.clustering.cluster(features, verbose=self.verbose)
+            return np.array([])
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
 
