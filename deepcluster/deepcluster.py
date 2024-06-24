@@ -314,11 +314,16 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            losses, pred_accuracy, true_accuracy = self.train(train_data)
+            if self.clustering_method == 'faiss':
+                losses, pred_accuracy = self.train(train_data)
+            else:
+                losses, pred_accuracy, true_accuracy = self.train(train_data)
+            
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
                 self.accuracy_overall_avg.update(pred_accuracy)
-                self.true_accuracy_overall_avg.update(true_accuracy)
+                if self.clustering_method != 'faiss':
+                    self.true_accuracy_overall_avg.update(true_accuracy)
 
             # Epoch Metrics
             if self.metrics:
@@ -396,7 +401,8 @@ class DeepCluster(BaseEstimator):
         self.model.train()
 
         accuracy_metric = MulticlassAccuracy()
-        true_accuracy_metric = MulticlassAccuracy()
+        if self.clustering_method != 'faiss':
+            true_accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         accuracies = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
@@ -419,7 +425,9 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
-        for i, (input, target, true_target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+        for i, (input, targets) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+            if self.clustering_method != 'faiss':
+                target, true_target = targets
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
@@ -430,7 +438,8 @@ class DeepCluster(BaseEstimator):
             output = self.model(input)
             loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
-            true_accuracy_metric.update(output, true_target)
+            if self.clustering_method != 'faiss':
+                true_accuracy_metric.update(output, true_target)
             # check Nan Loss
             if torch.isnan(loss):
                 print("targets", target)
@@ -463,6 +472,8 @@ class DeepCluster(BaseEstimator):
                 self.train_time.update(time.time() - end)
                 end = time.time()
         print(f'Accuracy Torcheval: {accuracy_metric.compute()=}')
+        if self.clustering_method == 'faiss':
+            return losses, accuracy_metric.compute()
         # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
         return losses, accuracy_metric.compute(), true_accuracy_metric.compute()
 
@@ -697,13 +708,15 @@ class DeepCluster(BaseEstimator):
             # Add Metrics Row
             if self.clustering_method == 'faiss':
                 pca_time = 0.0
+                true_accuracy_overall = 0.0
             else:
                 pca_time = self.pca_time.sum
+                true_accuracy_overall = torch.mean(self.true_accuracy_overall_avg.val).numpy()
             row = [
                 epoch, 
                 torch.mean(self.loss_overall_avg.val).numpy(),
                 torch.mean(self.accuracy_overall_avg.val).numpy(),
-                torch.mean(self.true_accuracy_overall_avg.val).numpy(),
+                true_accuracy_overall,
                 nmi,
                 nmi_epoch,
                 self.epoch_time.sum,
