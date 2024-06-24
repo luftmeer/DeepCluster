@@ -428,6 +428,8 @@ class DeepCluster(BaseEstimator):
         for i, (input, targets) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             if self.clustering_method != 'faiss':
                 target, true_target = targets
+            else:
+                target = targets
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
