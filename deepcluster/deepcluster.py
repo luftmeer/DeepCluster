@@ -370,8 +370,8 @@ class DeepCluster(BaseEstimator):
             del features
             if self.clustering_method != 'faiss':
                 del labels
+                del true_accuracy
             del pred_accuracy
-            del true_accuracy
             del losses
 
     def predict(self, batch: Tensor):
