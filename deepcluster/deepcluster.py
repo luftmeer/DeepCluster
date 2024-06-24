@@ -7,9 +7,11 @@ from torch.backends import cudnn
 from torch.utils import data
 from sklearn.base import BaseEstimator
 import numpy as np
-from .utils import faiss_kmeans
 from .utils.benchmarking import Meter
+from .utils import faiss_kmeans
 from .utils.pseudo_labeled_dataset import PseudoLabeledData
+from .utils import faiss_kmeans_orig
+from .utils.UnifiedSampler import UnifLabelSampler
 import os
 from sklearn.metrics import normalized_mutual_info_score
 from tqdm import tqdm
@@ -177,7 +179,7 @@ class DeepCluster(BaseEstimator):
         
         # Set initial Clustering
         if self.clustering_method == 'faiss':
-            self.clustering = faiss_kmeans.FaissKMeans(self.k)
+            self.clustering = faiss_kmeans_orig.Kmeans(self.k)
         elif self.clustering_method == 'sklearn':
             self.clustering = KMeans(n_clusters=self.k)
         
@@ -263,7 +265,7 @@ class DeepCluster(BaseEstimator):
             # Set clustering algorithm
             if self.reassign_clustering:
                 if self.clustering_method == 'faiss':
-                    self.clustering = faiss_kmeans.FaissKMeans(self.k)
+                    self.clustering = faiss_kmeans_orig.Kmeans(self.k)
                 elif self.clustering_method == 'sklearn':
                     self.clustering = KMeans(n_clusters=self.k)
             
@@ -279,19 +281,22 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
 
             # PCA reduce features
-            if self.pca:
+            if self.pca and not self.clustering_method == 'faiss':
                 features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
             labels = self.apply_clustering(features)
 
             # Create the training data set
-            train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
+            if self.clustering_method is not 'faiss':
+                train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
+            elif self.clustering_method == 'faiss':
+                train_dataset = faiss_kmeans_orig.cluster_assign(self.clustering.images_lists, data.dataset.data)
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            sampler = torch.utils.data.RandomSampler(train_dataset)
-
+            #sampler = torch.utils.data.RandomSampler(train_dataset)
+            sampler = UnifLabelSampler(len(train_dataset), self.clustering.images_lists)
             # Create Training Dataset
             train_data = torch.utils.data.DataLoader(
                 train_dataset,
@@ -562,7 +567,8 @@ class DeepCluster(BaseEstimator):
             end = time.time()
             
         if self.clustering_method == 'faiss':
-            labels = self.clustering.fit(features)
+            #labels = self.clustering.fit(features)
+            _ = self.clustering.cluster(features, verbose=self.verbose)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
 
@@ -687,6 +693,10 @@ class DeepCluster(BaseEstimator):
         with open(self.metrics_file, 'a', newline='') as file:
             writer = csv.writer(file)
             # Add Metrics Row
+            if self.clustering_method == 'faiss':
+                pca_time = 0.0
+            else:
+                pca_time = self.pca_time.sum
             row = [
                 epoch, 
                 torch.mean(self.loss_overall_avg.val).numpy(),
@@ -698,7 +708,7 @@ class DeepCluster(BaseEstimator):
                 self.train_time.sum,
                 self.features_time.sum,
                 self.cluster_time.sum,
-                self.pca_time.sum,
+                pca_time,
             ]
             writer.writerow(row)
         
