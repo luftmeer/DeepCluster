@@ -460,6 +460,7 @@ class DeepCluster(BaseEstimator):
         # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
         return losses, accuracy_metric.compute(), true_accuracy_metric.compute()
 
+    @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
 
