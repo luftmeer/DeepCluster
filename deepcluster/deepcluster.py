@@ -406,6 +406,7 @@ class DeepCluster(BaseEstimator):
         print(f'Accuracy Torcheval: {accuracy_metric.compute()=}')
         return losses, accuracies
 
+    @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction. 
 
