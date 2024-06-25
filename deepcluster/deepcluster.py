@@ -344,7 +344,8 @@ class DeepCluster(BaseEstimator):
                 target_labels = data.dataset.targets
             
             if self.clustering_method == 'faiss_orig':
-                self.print_results(epoch, losses, pred_accuracy, 0.0, train_data.dataset.targets, target_labels)
+                #self.print_results(epoch, losses, pred_accuracy, 0.0, train_data.dataset.targets, target_labels)
+                self.print_results(epoch, losses, pred_accuracy, 0.0, faiss_kmeans_orig.arrange_clustering(self.clustering.images_lists), target_labels)
             else:
                 self.print_results(epoch, losses, pred_accuracy, true_accuracy, train_data.dataset.targets, target_labels)
 
