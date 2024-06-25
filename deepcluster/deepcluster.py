@@ -594,7 +594,7 @@ class DeepCluster(BaseEstimator):
         if self.clustering_method == 'faiss_orig':
             _ = self.clustering.cluster(features, verbose=self.verbose)
             return np.array([])
-        elif self.clustering_methid == 'faiss':
+        elif self.clustering_method == 'faiss':
             labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
