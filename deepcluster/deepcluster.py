@@ -297,7 +297,10 @@ class DeepCluster(BaseEstimator):
             self.print_results(epoch, losses, accuracies, train_data.dataset.targets, target_labels)
 
             # Store psuedo-labels
-            self.cluster_logs.append(train_data.dataset.targets)
+            if self.clustering_method == 'faiss_orig':
+                self.cluster_logs.append(self.clustering.images_lists)
+            else:
+                self.cluster_logs.append(train_data.dataset.targets)
 
             self.execution_time.append(time.time() - start_time)
 
