@@ -650,7 +650,7 @@ class DeepCluster(BaseEstimator):
 
         print('Normalized Mutual Information Scores:')
         if len(self.cluster_logs) > 0:
-            nmi_epoch = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
+            nmi_epoch = normalized_mutual_info_score(pseudo_labels, faiss_kmeans_orig.arrange_clustering(self.cluster_logs[-1]))
             self.train_nmi.append(nmi_epoch)
             print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi_epoch}')
         else:
