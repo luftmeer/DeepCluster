@@ -28,6 +28,8 @@ from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 from torcheval.metrics import MulticlassAccuracy
 
+from deepcluster.utils.loss_functions import contrastive_criterion
+
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
 # Base folder for metrics
@@ -460,6 +462,17 @@ class DeepCluster(BaseEstimator):
             # add the loss to the losses tensor
             losses[i] = loss.item()
 
+            # calculate accuracy and add it to accuracies tensor
+            _, predicted = output.max(1)
+            #accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
+            
+            features = self.compute_features(input)
+            
+            # calculate contrastive loss of features and pseudo labels
+            contrastive_loss = contrastive_criterion(features, target)
+            
+            loss += contrastive_loss
+
             # Backward pass and optimize
             self.optimizer.zero_grad()
             self.optimizer_tl.zero_grad()
@@ -468,7 +481,7 @@ class DeepCluster(BaseEstimator):
             self.optimizer_tl.step()
             
             # Free up GPU memory
-            del input, target, output, loss
+            del input, target, output, loss, contrastive_loss, features
             torch.cuda.empty_cache()
             
             # Train Metrics
