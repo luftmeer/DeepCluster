@@ -296,7 +296,10 @@ class DeepCluster(BaseEstimator):
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
             #sampler = torch.utils.data.RandomSampler(train_dataset)
-            sampler = UnifLabelSampler(len(train_dataset), self.clustering.images_lists)
+            if self.clustering_method == 'faiss':
+                sampler = UnifLabelSampler(len(train_dataset), self.clustering.images_lists)
+            else:
+                sampler = torch.utils.data.RandomSampler(train_dataset)
             # Create Training Dataset
             train_data = torch.utils.data.DataLoader(
                 train_dataset,
@@ -429,11 +432,11 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
-        for i, (input, targets) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+        for i, vals in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             if self.clustering_method != 'faiss':
-                target, true_target = targets
+                input, target, true_target = vals
             else:
-                target = targets
+                input, target = vals
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
