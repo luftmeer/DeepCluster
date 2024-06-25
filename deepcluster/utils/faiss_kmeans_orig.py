@@ -140,8 +140,10 @@ def cluster_assign(images_lists, dataset):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
 
-    normalize = transforms.Normalize(mean=[0.48900422,],#, 0.47554612, 0.4395709],
-        std=[0.23639396,])#, 0.23279834, 0.24998063])
+    normalize = transforms.Normalize(
+        mean=[0.48900422, 0.47554612, 0.4395709],
+        std=[0.23639396, 0.23279834, 0.24998063]
+    )
     t = transforms.Compose([transforms.ToPILImage(),
                             transforms.RandomResizedCrop(224),
                             transforms.RandomHorizontalFlip(),
