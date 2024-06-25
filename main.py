@@ -57,13 +57,13 @@ def parse_args():
 
     # PCA Reduction
     parser.add_argument('--pca', action='store_true')
-    parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
+    parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss', 'faiss_orig'], default='faiss')
     parser.add_argument('--pca_reduction', type=int, default=256)
     parser.add_argument('--pca_whitening', action='store_true')
 
     # Clustering Methid
     parser.add_argument('--reassign_clustering', action='store_true')
-    parser.add_argument('--clustering', type=str, choices=['sklearn', 'faiss'], default='faiss')
+    parser.add_argument('--clustering', type=str, choices=['sklearn', 'faiss', 'faiss_orig'], default='faiss')
 
     # Metrics
     parser.add_argument('--metrics', action='store_true')

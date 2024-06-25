@@ -178,8 +178,10 @@ class DeepCluster(BaseEstimator):
                 self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
         
         # Set initial Clustering
-        if self.clustering_method == 'faiss':
+        if self.clustering_method == 'faiss_orig':
             self.clustering = faiss_kmeans_orig.Kmeans(self.k)
+        if self.clustering_method == 'faiss':
+            self.clustering = faiss_kmeans.FaissKMeans(self.k)
         elif self.clustering_method == 'sklearn':
             self.clustering = KMeans(n_clusters=self.k)
         
@@ -264,8 +266,10 @@ class DeepCluster(BaseEstimator):
             
             # Set clustering algorithm
             if self.reassign_clustering:
-                if self.clustering_method == 'faiss':
+                if self.clustering_method == 'faiss_orig':
                     self.clustering = faiss_kmeans_orig.Kmeans(self.k)
+                elif self.clustering_method == 'faiss':
+                    self.clustering = faiss_kmeans.FaissKMeans(self.k)
                 elif self.clustering_method == 'sklearn':
                     self.clustering = KMeans(n_clusters=self.k)
             
@@ -281,22 +285,22 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
 
             # PCA reduce features
-            if self.pca and not self.clustering_method == 'faiss':
+            if self.pca and not self.clustering_method == 'faiss_orig':
                 features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
             labels = self.apply_clustering(features)
 
             # Create the training data set
-            if self.clustering_method != 'faiss':
+            if self.clustering_method != 'faiss_orig':
                 train_dataset = self.create_pseudo_labeled_dataset(data.dataset, labels, self.cluster_assign_transform)
-            elif self.clustering_method == 'faiss':
+            elif self.clustering_method == 'faiss_orig':
                 train_dataset = faiss_kmeans_orig.cluster_assign(self.clustering.images_lists, data.dataset.data)
 
             # Sampler -> Random
             # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
             #sampler = torch.utils.data.RandomSampler(train_dataset)
-            if self.clustering_method == 'faiss':
+            if self.clustering_method == 'faiss_orig':
                 sampler = UnifLabelSampler(len(train_dataset), self.clustering.images_lists)
             else:
                 sampler = torch.utils.data.RandomSampler(train_dataset)
@@ -317,7 +321,7 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            if self.clustering_method == 'faiss':
+            if self.clustering_method == 'faiss_orig':
                 losses, pred_accuracy = self.train(train_data)
             else:
                 losses, pred_accuracy, true_accuracy = self.train(train_data)
@@ -325,7 +329,7 @@ class DeepCluster(BaseEstimator):
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
                 self.accuracy_overall_avg.update(pred_accuracy)
-                if self.clustering_method != 'faiss':
+                if self.clustering_method != 'faiss_orig':
                     self.true_accuracy_overall_avg.update(true_accuracy)
 
             # Epoch Metrics
@@ -339,7 +343,7 @@ class DeepCluster(BaseEstimator):
             else:
                 target_labels = data.dataset.targets
             
-            if self.clustering_method == 'faiss':
+            if self.clustering_method == 'faiss_orig':
                 self.print_results(epoch, losses, pred_accuracy, 0.0, train_data.dataset.targets, target_labels)
             else:
                 self.print_results(epoch, losses, pred_accuracy, true_accuracy, train_data.dataset.targets, target_labels)
@@ -371,7 +375,7 @@ class DeepCluster(BaseEstimator):
             
             del train_data
             del features
-            if self.clustering_method != 'faiss':
+            if self.clustering_method != 'faiss_orig':
                 del labels
                 del true_accuracy
             del pred_accuracy
@@ -408,7 +412,7 @@ class DeepCluster(BaseEstimator):
         self.model.train()
 
         accuracy_metric = MulticlassAccuracy()
-        if self.clustering_method != 'faiss':
+        if self.clustering_method != 'faiss_orig':
             true_accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
@@ -433,7 +437,7 @@ class DeepCluster(BaseEstimator):
         if self.metrics:
             end = time.time()
         for i, vals in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
-            if self.clustering_method != 'faiss':
+            if self.clustering_method != 'faiss_orig':
                 input, target, true_target = vals
             else:
                 input, target = vals
@@ -447,7 +451,7 @@ class DeepCluster(BaseEstimator):
             output = self.model(input)
             loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
-            if self.clustering_method != 'faiss':
+            if self.clustering_method != 'faiss_orig':
                 true_accuracy_metric.update(output, true_target)
             # check Nan Loss
             if torch.isnan(loss):
@@ -481,7 +485,7 @@ class DeepCluster(BaseEstimator):
                 self.train_time.update(time.time() - end)
                 end = time.time()
         print(f'Accuracy Torcheval: {accuracy_metric.compute()=}')
-        if self.clustering_method == 'faiss':
+        if self.clustering_method == 'faiss_orig':
             return losses, accuracy_metric.compute()
         # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
         return losses, accuracy_metric.compute(), true_accuracy_metric.compute()
@@ -587,10 +591,11 @@ class DeepCluster(BaseEstimator):
         if self.metrics:
             end = time.time()
             
-        if self.clustering_method == 'faiss':
-            #labels = self.clustering.fit(features)
+        if self.clustering_method == 'faiss_orig':
             _ = self.clustering.cluster(features, verbose=self.verbose)
             return np.array([])
+        elif self.clustering_methid == 'faiss':
+            labels = self.clustering.fit(features)
         elif self.clustering_method == 'sklearn':
             labels = self.clustering.fit_predict(features)
 
@@ -715,7 +720,7 @@ class DeepCluster(BaseEstimator):
         with open(self.metrics_file, 'a', newline='') as file:
             writer = csv.writer(file)
             # Add Metrics Row
-            if self.clustering_method == 'faiss':
+            if self.clustering_method == 'faiss_orig':
                 pca_time = 0.0
                 true_accuracy_overall = 0.0
             else:
