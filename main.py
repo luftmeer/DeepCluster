@@ -151,8 +151,6 @@ def main(args):
     
     # Cluster Assignment Transformer
     ca_tf = datasets.BASE_CA_TRANSFORM
-    if args.clustering == 'faiss': # Add toPILImage transform to first position when faiss is selected
-        ca_tf.insert(0, transforms.ToPILImage())
     ca_tf.append(datasets.NORMALIZATION[args.dataset])
     ca_tf = transforms.Compose(ca_tf)
     
