@@ -433,7 +433,7 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
-        for i, input, target, true_target in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
+        for i, (input, target, true_target) in tqdm(enumerate(train_data), desc='Training', total=len(train_data)):
             # Recasting target as LongTensor
             target = target.type(torch.LongTensor)
             input, target = input.to(self.device), target.to(self.device)
