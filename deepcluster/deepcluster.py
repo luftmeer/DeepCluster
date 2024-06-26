@@ -28,7 +28,7 @@ from sklearn.metrics import normalized_mutual_info_score
 from torch import Tensor
 from torcheval.metrics import MulticlassAccuracy
 
-from deepcluster.utils.loss_functions import contrastive_criterion, NT_XentLoss
+from deepcluster.utils.loss_functions import ContrastiveLoss, NT_XentLoss
 
 # Base folder for checkpoints
 BASE_CPT = './checkpoints/'
@@ -183,7 +183,7 @@ class DeepCluster(BaseEstimator):
         file_prefix.append(f"loss-{str(self.loss_criterion)[:-2]}")
         
         # Contrastive Loss using pseudo labels
-        self.contrastive_criterion = contrastive_criterion
+        self.contrastive_criterion = ContrastiveLoss()
         
         # contrastive loss per positive pair in the batch
         # was used in SimCLR and MoCo
