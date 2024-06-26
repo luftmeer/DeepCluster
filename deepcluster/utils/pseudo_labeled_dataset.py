@@ -44,7 +44,7 @@ class PseudoLabeledData(data.Dataset):
         image, true_target = self.dataset[index]
         pseudolabel = self.targets[index]
         if isinstance(image, torch.Tensor):
-            image = F.to_pil_image(image.to('cpu'))
+            #image = F.to_pil_image(image.to('cpu'))
             image = self.transform(image)
             return image, pseudolabel, true_target
         
