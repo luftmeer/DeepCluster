@@ -26,20 +26,24 @@ def loss_function_loader(loss_fn: str):
     elif loss_fn == 'CrossEntropy':
         return nn.CrossEntropyLoss()
     
-def contrastive_criterion(features, labels):
-    # temperature = 0.1
-    # similarity_matrix = torch.matmul(features, features.T) / temperature
-    similarity_matrix = torch.matmul(features, features.T)
-    mask = torch.eye(features.size(0), dtype=torch.bool)
-    labels_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+class ContrastiveLoss(nn.Module):
+    def __init__(self, temperature=0.1):
+        super(ContrastiveLoss, self).__init__()
+        self.temperature = temperature
 
-    positives = labels_mask * (~mask).float()
-    negatives = (1 - labels_mask)
+    def forward(self, features, labels):
+        similarity_matrix = torch.matmul(features, features.T) / self.temperature
+        mask = torch.eye(features.size(0), dtype=torch.bool)
+        labels_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
-    numerator = torch.exp(similarity_matrix) * positives
-    denominator = (torch.exp(similarity_matrix) * negatives).sum(dim=1, keepdim=True)
+        positives = labels_mask * (~mask).float()
+        negatives = (1 - labels_mask)
 
-    return -torch.log(numerator / denominator.sum(dim=1, keepdim=True) + 1e-10).mean()
+        numerator = torch.exp(similarity_matrix) * positives
+        denominator = (torch.exp(similarity_matrix) * negatives).sum(dim=1, keepdim=True)
+
+        loss = -torch.log((numerator.sum(dim=1, keepdim=True) / denominator.sum(dim=1, keepdim=True)) + 1e-10).mean()
+        return loss
 
 class NT_XentLoss(torch.nn.Module):
     def __init__(self, batch_size, temperature):
