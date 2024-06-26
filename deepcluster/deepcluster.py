@@ -37,7 +37,9 @@ BASE_METRICS = './metrics/'
 # Metrics Header
 METRICS_HEADER = [
     'epoch', 
-    'loss_avg', 
+    'loss_avg',
+    'contrastive_loss_avg',
+    'deep_cluster_loss_avg',
     'accuracy', 
     'true_accuracy', 
     'nmi_true_pred', 
@@ -194,6 +196,8 @@ class DeepCluster(BaseEstimator):
             self.epoch_time = Meter()
             self.train_time = Meter()
             self.loss_overall_avg = Meter()
+            self.contrastive_loss_overall_avg = Meter()
+            self.deep_cluster_loss_overall_avg = Meter()
             self.accuracy_overall_avg = Meter()
             self.true_accuracy_overall_avg = Meter()
             self.features_time = Meter()
@@ -339,10 +343,12 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            losses, pred_accuracy, true_accuracy = self.train(train_data)
+            losses, pred_accuracy, true_accuracy, deep_cluster_losses, contrastive_losses = self.train(train_data)
             
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
+                self.contrastive_loss_overall_avg.update(torch.mean(contrastive_losses))
+                self.deep_cluster_loss_overall_avg.update(torch.mean(deep_cluster_losses))
                 self.accuracy_overall_avg.update(pred_accuracy)
                 self.true_accuracy_overall_avg.update(true_accuracy)
 
@@ -426,6 +432,8 @@ class DeepCluster(BaseEstimator):
         true_accuracy_metric = MulticlassAccuracy()
         
         losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        contrastive_losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        deep_clusster_losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
         
         if self.reassign_optimizer_tl:
             if str(self.optimizer_tl).split(' ')[0] == 'SGD':
@@ -454,7 +462,7 @@ class DeepCluster(BaseEstimator):
 
             # Forward pass
             output = self.model(input)
-            loss = self.loss_criterion(output, target)
+            deep_clusster_loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
             true_accuracy_metric.update(output, true_target)
             # check Nan Loss
@@ -466,8 +474,8 @@ class DeepCluster(BaseEstimator):
 
                 break
 
-            # add the loss to the losses tensor
-            losses[i] = loss.item()
+            # add the deep cluster loss to the deep cluster losses tensor
+            deep_clusster_losses[i] = deep_clusster_loss.item()
 
             # calculate accuracy and add it to accuracies tensor
             _, predicted = output.max(1)
@@ -478,10 +486,13 @@ class DeepCluster(BaseEstimator):
             # calculate contrastive loss of features and pseudo labels
             contrastive_loss = self.contrastive_criterion(features, target)
             
-            # TODO: Create Contrastive Head, that creates two pertubations 
-            # of the input and calculates the contrastive loss
+            # add the contrastive loss to the contrastive losses tensor
+            contrastive_losses[i] = contrastive_loss.item()
             
-            loss += contrastive_loss
+            loss = deep_clusster_loss + contrastive_loss
+            
+            # add the loss to the losses tensor
+            losses[i] = loss.item()
 
             # Backward pass and optimize
             self.optimizer.zero_grad()
@@ -500,7 +511,7 @@ class DeepCluster(BaseEstimator):
                 end = time.time()
 
         # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
-        return losses, accuracy_metric.compute(), true_accuracy_metric.compute()
+        return losses, accuracy_metric.compute(), true_accuracy_metric.compute(), deep_clusster_losses, contrastive_losses
 
     @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
@@ -734,6 +745,8 @@ class DeepCluster(BaseEstimator):
             row = [
                 epoch, 
                 torch.mean(self.loss_overall_avg.val).numpy(),
+                torch.mean(self.contrastive_loss_overall_avg.val).numpy(),
+                torch.mean(self.deep_cluster_loss_overall_avg.val).numpy(),
                 torch.mean(self.accuracy_overall_avg.val).numpy(),
                 torch.mean(self.true_accuracy_overall_avg.val).numpy(),
                 nmi,
