@@ -68,6 +68,7 @@ def parse_args():
     # Metrics
     parser.add_argument('--metrics', action='store_true')
     parser.add_argument('--metrics_file', type=str, default=None)
+    parser.add_argument('--metrics_dir', type=str, default=None)
 
     # Checkpoints
     parser.add_argument('--checkpoint', type=str, default=None)
@@ -180,6 +181,7 @@ def main(args):
         pca_reduction=args.pca_reduction,
         pca_whitening=args.pca_whitening,
         clustering_method=args.clustering,
+        metrics_dir=args.metrics_dir,
         metrics=args.metrics,
         metrics_file=args.metrics_file,
         metrics_metadata=str(args)
