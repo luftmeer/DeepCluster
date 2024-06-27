@@ -79,6 +79,7 @@ class DeepCluster(BaseEstimator):
                 optim_tl_weight_decay: float =10.**-5,
                 optim_tl_beta1: float =0.9,
                 optim_tl_beta2: float =0.999,
+                seed: int = None,
                 ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
 
@@ -207,6 +208,12 @@ class DeepCluster(BaseEstimator):
         
         if self.checkpoint and not self.checkpoint_file:
             self.checkpoint = f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
+        
+        # Random Seed Setting    
+        if seed:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            np.random.seed(seed)
 
     def save_checkpoint(self, epoch: int, best_model: bool=False):
         """Helper Function to continuously store a checkpoint of the current state of the CNN training

@@ -78,7 +78,7 @@ def parse_args():
     parser.add_argument('--verbose', '-v', action='store_true')
 
     # Seed
-    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--seed', type=int, default=None)
     
     return parser.parse_args()
     
@@ -186,7 +186,8 @@ def main(args):
         metrics_dir=args.metrics_dir,
         metrics=args.metrics,
         metrics_file=args.metrics_file,
-        metrics_metadata=str(args)
+        metrics_metadata=str(args),
+        seed=args.seed
     )
     
     
