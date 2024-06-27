@@ -56,6 +56,7 @@ class DeepCluster(BaseEstimator):
                 loss_criterion: object,  # PyTorch Loss Function
                 cluster_assign_tf: transforms,
                 dataset_name: str,  # Name of the dataset when saving checkpoints
+                metrics_dir: str = None, # Special metrics folder for a run
                 requires_grad: bool = False,
                 reassign_clustering: bool = False,
                 checkpoint: str = None,  # Direct path to the checkpoint
@@ -167,6 +168,14 @@ class DeepCluster(BaseEstimator):
         self.pca_whitening = pca_whitening
 
         # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
+        file_prefix = []
+        file_prefix.append(f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}") # Date & Time
+        file_prefix.append(f"{self.model}")
+        file_prefix.append(f"pca-{self.pca_method}")
+        file_prefix.append(f"clustering-{self.clustering_method}")
+        file_prefix.append(f"modeloptim-{str(self.optimizer).split(' ')[0]}")
+        file_prefix.append(f"tloptim-{str(self.optimizer_tl).split(' ')[0]}")
+        file_prefix.append(f"loss-{str(self.loss_criterion)[:-2]}")
         
         # Init metrics
         if self.metrics:
@@ -181,9 +190,11 @@ class DeepCluster(BaseEstimator):
             
             if metrics_file:
                 self.metrics_file = metrics_file
+            elif metrics_dir:
+                self.metrics_file = f"{metrics_dir}/{'_'.join(self.file_prefix)}.csv"
             else:
                  # The File the metrics are stored at after each epoch
-                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
+                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{'_'.join(self.file_prefix)}.csv"
         
         self.clustering = None
         
@@ -193,7 +204,7 @@ class DeepCluster(BaseEstimator):
         self.best_model = 0.
         
         if isinstance(self.checkpoint, type(None)):
-            self.checkpoint = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.cpt"
+            self.checkpoint = f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
 
     def save_checkpoint(self, epoch: int, best_model: bool=False):
         """Helper Function to continuously store a checkpoint of the current state of the CNN training
@@ -215,9 +226,8 @@ class DeepCluster(BaseEstimator):
         if self.verbose:
             print(f'Saving the current checkpoint at epoch {epoch + 1}..')
 
-        filename = f"{BASE_CPT}/{self.dataset_name}/{self.checkpoint}"
         if best_model:
-            filename = f'{filename}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+            filename = f'{self.checkpoint}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
         
         torch.save({
             'epoch': epoch + 1,
