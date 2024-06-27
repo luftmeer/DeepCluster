@@ -162,14 +162,11 @@ class DeepCluster(BaseEstimator):
         self.dataset_name = dataset_name
         self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
         self.cluster_logs = []
-        self.train_losses = []
-        self.train_accuracies = []
-        self.train_nmi = []
-        self.execution_time = []
         self.metrics = metrics
         self.metrics_metadata = metrics_metadata
-
         self.pca_whitening = pca_whitening
+
+        # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
         
         # Init metrics
         if self.metrics:
@@ -337,8 +334,6 @@ class DeepCluster(BaseEstimator):
 
             # Store psuedo-labels
             self.cluster_logs.append(labels)
-
-            self.execution_time.append(time.time() - start_time)
             
             # Print Metrics
             if self.metrics:
@@ -615,17 +610,14 @@ class DeepCluster(BaseEstimator):
 
         print("-" * 20, "Results", "-" * 20)
         print(f"Average loss: {torch.mean(losses)}")
-        self.train_losses.append(torch.mean(losses).item())
 
         print(f"Pseudo vs Predicted Labels Accuracy: {pred_accuracy}")
         print(f"True vs Predicted Labels Accuracy: {true_accuracy}")
-        self.train_accuracies.append(pred_accuracy.item())
         print("-" * 50)
 
         print('Normalized Mutual Information Scores:')
         if len(self.cluster_logs) > 0:
             nmi_epoch = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
-            self.train_nmi.append(nmi_epoch)
             print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi_epoch}')
         else:
             nmi_epoch = 0.
