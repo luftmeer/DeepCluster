@@ -32,6 +32,8 @@ def parse_args():
     # Dataset
     parser.add_argument('--dataset', type=str, choices=datasets.AVAILABLE_DATASETS, default='MNIST')
     parser.add_argument('--data_dir', type=str, default='./data')
+    parser.add_argument('--ds_train', action='store_true')
+    parser.add_argument('--ds_split', type=str, choices=['train', 'test', 'unlabeled', 'train+unlabeled', 'val'], default='train')
     parser.add_argument('--batch_size', type=int, default=256)
 
     # Optimizer (Main)
