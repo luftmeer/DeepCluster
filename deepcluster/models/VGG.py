@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+import math
 
 class VGG16(nn.Module):
     def __init__(self, num_classes=1000, input_dim: int=3, input_size=28, grayscale: bool=True, sobel: bool=True):
