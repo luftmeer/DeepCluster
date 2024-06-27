@@ -188,11 +188,7 @@ class DeepCluster(BaseEstimator):
                  # The File the metrics are stored at after each epoch
                 self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_{self.model}_pca-{self.pca_method}_clustering-{self.clustering_method}_modeloptim-{str(self.optimizer).split(' ')[0]}_tloptim-{str(self.optimizer_tl).split(' ')[0]}_loss-{str(self.loss_criterion)[:-2]}.csv"
         
-        # Set initial Clustering
-        if self.clustering_method == 'faiss':
-            self.clustering = faiss_kmeans.Kmeans(self.k)
-        elif self.clustering_method == 'sklearn':
-            self.clustering = KMeans(n_clusters=self.k)
+        self.clustering = None
         
         # Placeholder for the best accuracy of a Model at an epoch
         # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
@@ -272,17 +268,8 @@ class DeepCluster(BaseEstimator):
         if self.metrics:
             end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
-            
-            # Set clustering algorithm
-            if self.reassign_clustering:
-                if self.clustering_method == 'faiss':
-                    self.clustering = faiss_kmeans.Kmeans(self.k)
-                elif self.clustering_method == 'sklearn':
-                    self.clustering = KMeans(n_clusters=self.k)
-            
             start_time = time.time()
             if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
-
 
             # Remove head
             self.model.top_layer = None
@@ -573,7 +560,14 @@ class DeepCluster(BaseEstimator):
         """
         if self.metrics:
             end = time.time()
-            
+        
+        # Set clustering algorithm when clustering is not set yet or reassign is active
+        if not self.clustering or self.reassign_clustering:
+            if self.clustering_method == 'faiss':
+                self.clustering = faiss_kmeans.Kmeans(self.k)
+            elif self.clustering_method == 'sklearn':
+                self.clustering = KMeans(n_clusters=self.k)
+           
         if self.clustering_method == 'faiss':
             _ = self.clustering.cluster(features, verbose=self.verbose)
             labels = faiss_kmeans.arrange_clustering(self.clustering.images_lists)
