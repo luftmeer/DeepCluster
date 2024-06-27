@@ -59,7 +59,8 @@ class DeepCluster(BaseEstimator):
                 metrics_dir: str = None, # Special metrics folder for a run
                 requires_grad: bool = False,
                 reassign_clustering: bool = False,
-                checkpoint: str = None,  # Direct path to the checkpoint
+                checkpoint: bool = False,
+                checkpoint_file: str = None,  # Direct path to the checkpoint
                 epochs: int = 500,  # Training Epoch
                 batch_size: int = 256,
                 k: int = 1000,
@@ -160,6 +161,7 @@ class DeepCluster(BaseEstimator):
         self.pca_method = pca_method
         self.pca_reduction_value = pca_reduction
         self.checkpoint = checkpoint
+        self.checkpoint_file = checkpoint_file
         self.dataset_name = dataset_name
         self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
         self.cluster_logs = []
@@ -203,7 +205,7 @@ class DeepCluster(BaseEstimator):
         # Only a current best model will overwrite a previous best model, when the accuracy is greater than the previous one
         self.best_model = 0.
         
-        if isinstance(self.checkpoint, type(None)):
+        if self.checkpoint and not self.checkpoint_file:
             self.checkpoint = f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
 
     def save_checkpoint(self, epoch: int, best_model: bool=False):
@@ -358,11 +360,13 @@ class DeepCluster(BaseEstimator):
                 print(f'A new best model has been found:')
                 print(f'- Previous model: {self.best_model}')
                 print(f'- Current model: {pred_accuracy.numpy()}')
-                self.save_checkpoint(epoch=epoch, best_model=True)
+                if self.checkpoint:
+                    self.save_checkpoint(epoch=epoch, best_model=True)
                 self.best_model = pred_accuracy.numpy()
             
             if self.verbose: print('Creating new checkpoint..')
-            self.save_checkpoint(epoch)
+            if self.checkpoint:
+                self.save_checkpoint(epoch)
             if self.verbose: print('Finished storing checkpoint')
             
             del train_data

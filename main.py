@@ -71,7 +71,8 @@ def parse_args():
     parser.add_argument('--metrics_dir', type=str, default=None)
 
     # Checkpoints
-    parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument('--checkpoint', action='store_true') # Activate Checkpoints
+    parser.add_argument('--checkpoint_file', type=str, default=None) # Resume with a checkpoint file
 
     # Verbose
     parser.add_argument('--verbose', '-v', action='store_true')
@@ -172,6 +173,7 @@ def main(args):
         cluster_assign_tf=ca_tf,
         dataset_name=args.dataset,
         checkpoint=args.checkpoint,
+        checkpoint_file=args.checkpoint_file,
         epochs=args.epochs,
         batch_size=args.batch_size,
         k=args.num_classes,
