@@ -194,10 +194,10 @@ class DeepCluster(BaseEstimator):
             if metrics_file:
                 self.metrics_file = metrics_file
             elif metrics_dir:
-                self.metrics_file = f"{metrics_dir}/{'_'.join(self.file_prefix)}.csv"
+                self.metrics_file = f"{metrics_dir}/{'_'.join(file_prefix)}.csv"
             else:
                  # The File the metrics are stored at after each epoch
-                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{'_'.join(self.file_prefix)}.csv"
+                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{'_'.join(file_prefix)}.csv"
         
         self.clustering = None
         
