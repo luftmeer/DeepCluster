@@ -25,6 +25,7 @@ BASE_TRANSFORM = [
 
 # Cluster Assignment base transformation
 BASE_CA_TRANSFORM = [
+    transforms.ToPILImage(),
     transforms.RandomResizedCrop(224),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor()
