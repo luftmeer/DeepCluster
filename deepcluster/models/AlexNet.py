@@ -58,6 +58,7 @@ class AlexNet(nn.Module):
         
         self.top_layer = nn.Linear(4096, num_classes)
         
+        # Initialize weights
         self._initialize_weights()
         
         # Define grayscale Filter

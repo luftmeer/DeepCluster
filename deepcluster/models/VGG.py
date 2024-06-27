@@ -92,6 +92,9 @@ class VGG16(nn.Module):
         # 16th Layer
         self.top_layer = nn.Linear(4096, num_classes)
         
+        # Initialize weights
+        self._initialize_weights()
+        
         # Define grayscale Filter
         self.grayscale = None
         if grayscale:
@@ -141,3 +144,19 @@ class VGG16(nn.Module):
     
     def __repr__(self) -> str:
         return 'VGG16'
+    
+    def _initialize_weights(self):
+        for y,m in enumerate(self.modules()):
+            if isinstance(m, nn.Conv2d):
+                #print(y)
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                for i in range(m.out_channels):
+                    m.weight.data[i].normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
