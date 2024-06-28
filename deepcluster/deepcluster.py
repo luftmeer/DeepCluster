@@ -537,33 +537,24 @@ class DeepCluster(BaseEstimator):
 
             # add the deep cluster loss to the deep cluster losses tensor
             deep_clusster_losses[i] = deep_clusster_loss.item()
-            print("This is the deep cluster loss", deep_clusster_loss)
-            print(deep_clusster_loss.shape)
 
             # calculate accuracy and add it to accuracies tensor
             _, predicted = output.max(1)
             # accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
 
             if self.deep_cluster_and_contrastive_loss:
-                print("Deep Cluster and Contrastive Loss")
                 contrastive_loss = self.calculate_contrastive_loss(input, target)
 
                 # add the contrastive loss to the contrastive losses tensor
                 contrastive_losses[i] = contrastive_loss.item()
-                # print("This is the contrastive loss", contrastive_loss)
-                # print(contrastive_loss.shape)
                 loss = deep_clusster_loss + contrastive_loss
 
             elif self.deep_cluster_and_ntxent_loss:
-                print("Contrastive Deep Cluster and NT-Xent Loss")
                 ntxent_loss = self.calculate_nt_xent_loss(input)
-                # print("This is the ntxent loss", ntxent_loss)
-                # ntxent_losses[i] = ntxent_loss.item()
                 # comobine the deep cluster loss and the ntxent loss
                 loss = deep_clusster_loss + ntxent_loss
 
             else:
-                print("Normal Deep Cluster Loss")
                 loss = deep_clusster_loss
 
             # add the loss to the losses tensor
