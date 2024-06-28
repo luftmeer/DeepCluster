@@ -22,7 +22,9 @@ def parse_args():
     parser.add_argument('--arch', type=str, choices=['AlexNet', 'VGG16'], default='AlexNet')
     parser.add_argument('--input_dim', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=1000)
-    parser.add_argument('--sobel', action='store_true') # --sobel -> active, --no-sobel inactive
+    parser.add_argument('--sobel', action='store_true')
+    parser.add_argument('--grayscale', action='store_true')
+    parser.add_argument('--requires_grad', action='store_true')
 
     # DeepCluster Model
     parser.add_argument('--epochs', type=int, default=500)
@@ -30,6 +32,8 @@ def parse_args():
     # Dataset
     parser.add_argument('--dataset', type=str, choices=datasets.AVAILABLE_DATASETS, default='MNIST')
     parser.add_argument('--data_dir', type=str, default='./data')
+    parser.add_argument('--ds_train', action='store_true')
+    parser.add_argument('--ds_split', type=str, choices=['train', 'test', 'unlabeled', 'train+unlabeled', 'val'], default='train')
     parser.add_argument('--batch_size', type=int, default=256)
 
     # Optimizer (Main)
@@ -39,8 +43,10 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, choices=range(0, 1), default=10**-5)
     parser.add_argument('--beta1', type=float, choices=range(0, 1), default=0.9) # For Adam
     parser.add_argument('--beta2', type=float, choices=range(0, 1), default=0.999) # For Adam
+    parser.add_argument('--param_requires_grad', action='store_true')
 
     # Optimizer (Top Layer)
+    parser.add_argument('--reassign_optimizer_tl', action='store_true')
     parser.add_argument('--optimizer_tl', type=str, choices=optimizer.OPTIMIZERS, default='SGD')
     parser.add_argument('--lr_tl', type=float, choices=range(0, 1), default=0.05)
     parser.add_argument('--momentum_tl', type=float, choices=range(0, 1), default=0.9)
@@ -52,25 +58,29 @@ def parse_args():
     parser.add_argument('--loss_fn', type=str, choices=loss_functions.LOSS_FUNCTIONS, default='CrossEntropy')
 
     # PCA Reduction
+    parser.add_argument('--pca', action='store_true')
     parser.add_argument('--pca_method', type=str, choices=['sklearn', 'faiss'], default='faiss')
     parser.add_argument('--pca_reduction', type=int, default=256)
     parser.add_argument('--pca_whitening', action='store_true')
 
     # Clustering Methid
+    parser.add_argument('--reassign_clustering', action='store_true')
     parser.add_argument('--clustering', type=str, choices=['sklearn', 'faiss'], default='faiss')
 
     # Metrics
     parser.add_argument('--metrics', action='store_true')
     parser.add_argument('--metrics_file', type=str, default=None)
+    parser.add_argument('--metrics_dir', type=str, default=None)
 
     # Checkpoints
-    parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument('--checkpoint', action='store_true') # Activate Checkpoints
+    parser.add_argument('--checkpoint_file', type=str, default=None) # Resume with a checkpoint file
 
     # Verbose
     parser.add_argument('--verbose', '-v', action='store_true')
 
     # Seed
-    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--seed', type=int, default=None)
     
     return parser.parse_args()
     
@@ -89,17 +99,21 @@ def main(args):
     # Model Loading
     print('Loading Model...')
     if args.arch == 'AlexNet':
-        model = AlexNet(input_dim=args.input_dim, num_classes=args.num_classes, sobel=args.sobel)
+        model = AlexNet(input_dim=args.input_dim, num_classes=args.num_classes, grayscale=args.grayscale, sobel=args.sobel)
     elif args.arch == 'VGG16':
-        model = VGG16(input_dim=args.input_dim, num_classes=args.num_classes, sobel=args.sobel)
+        model = VGG16(input_dim=args.input_dim, num_classes=args.num_classes, grayscale=args.grayscale, sobel=args.sobel)
     print('Model Loaded...')
     
     # Main Optimizer Loading
     print('Creating main model Optimizer...')
+    if args.param_requires_grad:
+        parameters = filter(lambda x: x.requires_grad, model.parameters())
+    else:
+        parameters = model.parameters()
     if args.optimizer == 'SGD':
         model_optimizer = optimizer.optimizer_loader(
             optimizer_name=args.optimizer, 
-            parameter=filter(lambda x: x.requires_grad, model.parameters()), 
+            parameter=parameters,
             lr=args.lr,
             momentum=args.momentum,
             weight_decay=args.weight_decay,    
@@ -141,28 +155,41 @@ def main(args):
     
     # Cluster Assignment Transformer
     ca_tf = datasets.BASE_CA_TRANSFORM
+    ca_tf.append(datasets.NORMALIZATION[args.dataset])
     ca_tf = transforms.Compose(ca_tf)
     
     # Define DeepCluster Model
     DeepCluster_Model = DeepCluster(
         model=model,
+        requires_grad=args.requires_grad,
         optim=model_optimizer,
+        reassign_optimizer_tl=args.reassign_optimizer_tl,
+        reassign_clustering=args.reassign_clustering,
         optim_tl=tl_optimizer,
+        optim_tl_lr=args.lr_tl,
+        optim_tl_momentum=args.momentum_tl,
+        optim_tl_weight_decay=args.weight_decay_tl,
+        optim_tl_beta1=args.beta1_tl,
+        optim_tl_beta2=args.beta2_tl,
         loss_criterion=loss_fn,
         cluster_assign_tf=ca_tf,
         dataset_name=args.dataset,
         checkpoint=args.checkpoint,
+        checkpoint_file=args.checkpoint_file,
         epochs=args.epochs,
         batch_size=args.batch_size,
         k=args.num_classes,
         verbose=args.verbose,
+        pca=args.pca,
         pca_method=args.pca_method,
         pca_reduction=args.pca_reduction,
         pca_whitening=args.pca_whitening,
         clustering_method=args.clustering,
+        metrics_dir=args.metrics_dir,
         metrics=args.metrics,
         metrics_file=args.metrics_file,
-        metrics_metadata=str(args)
+        metrics_metadata=str(args),
+        seed=args.seed
     )
     
     
