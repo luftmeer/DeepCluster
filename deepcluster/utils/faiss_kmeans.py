@@ -69,9 +69,6 @@ class ReassignedDataset(data.Dataset):
         true_target = self.true_targets[index]
         # img = pil_loader(path)
         if self.transform is not None:
-            # if img is numpy array transform it into PIL Image
-            if isinstance(img, np.ndarray):
-                img = Image.fromarray(img)
 
             img = self.transform(img)
         return img, pseudolabel, true_target
