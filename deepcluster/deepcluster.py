@@ -54,39 +54,41 @@ METRICS_HEADER = [
 
 class DeepCluster(BaseEstimator):
     def __init__(
-                self,
-                model: nn.Module,  # CNN Model
-                optim: optim.Optimizer,  # Optimizer for the parameters of the model
-                optim_tl: optim.Optimizer,  # Optimizer for the Top Layer Parameters
-                loss_criterion: object,  # PyTorch Loss Function
-                cluster_assign_tf: transforms,
-                dataset_name: str,  # Name of the dataset when saving checkpoints
-                metrics_dir: str = None, # Special metrics folder for a run
-                requires_grad: bool = False,
-                reassign_clustering: bool = False,
-                checkpoint: bool = False,
-                checkpoint_file: str = None,  # Direct path to the checkpoint
-                epochs: int = 500,  # Training Epoch
-                batch_size: int = 256,
-                k: int = 1000,
-                verbose: bool = False,  # Verbose output while training
-                pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
-                clustering_method: str = 'faiss',
-                pca: bool = True,
-                pca_method: str = 'faiss',
-                pca_whitening: bool = True,
-                metrics: bool=True,
-                metrics_file: str=None, # Path to metrics csv file, mainly when continuing a previous training after the process stopped 
-                metrics_metadata: str=None,
-                reassign_optimizer_tl: bool = False,
-                optim_tl_lr: float = 0.05,
-                optim_tl_momentum: float =0.9,
-                optim_tl_weight_decay: float =10.**-5,
-                optim_tl_beta1: float =0.9,
-                optim_tl_beta2: float =0.999,
-                seed: int = None,
-                ):
-        """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research). 
+        self,
+        model: nn.Module,  # CNN Model
+        optim: optim.Optimizer,  # Optimizer for the parameters of the model
+        optim_tl: optim.Optimizer,  # Optimizer for the Top Layer Parameters
+        loss_criterion: object,  # PyTorch Loss Function
+        cluster_assign_tf: transforms,
+        dataset_name: str,  # Name of the dataset when saving checkpoints
+        metrics_dir: str = None,  # Special metrics folder for a run
+        requires_grad: bool = False,
+        reassign_clustering: bool = False,
+        checkpoint: bool = False,
+        checkpoint_file: str = None,  # Direct path to the checkpoint
+        epochs: int = 500,  # Training Epoch
+        batch_size: int = 256,
+        k: int = 1000,
+        verbose: bool = False,  # Verbose output while training
+        pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
+        clustering_method: str = "faiss",
+        pca: bool = True,
+        pca_method: str = "faiss",
+        pca_whitening: bool = True,
+        metrics: bool = True,
+        metrics_file: str = None,  # Path to metrics csv file, mainly when continuing a previous training after the process stopped
+        metrics_metadata: str = None,
+        reassign_optimizer_tl: bool = False,
+        optim_tl_lr: float = 0.05,
+        optim_tl_momentum: float = 0.9,
+        optim_tl_weight_decay: float = 10.0**-5,
+        optim_tl_beta1: float = 0.9,
+        optim_tl_beta2: float = 0.999,
+        seed: int = None,
+        deep_cluster_and_contrastive_loss: bool = False,
+        deep_cluster_and_ntxent_loss: bool = False,
+    ):
+        """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
         Parameters
         ----------
@@ -183,15 +185,32 @@ class DeepCluster(BaseEstimator):
         # contrastive loss per positive pair in the batch
         # was used in SimCLR and MoCo
         self.nt_xent_loss = NT_XentLoss(batch_size=batch_size, temperature=0.5)
-        
-        self.augmentation_fn = transforms.Compose([
-            transforms.Resize(230),
-            transforms.RandomCrop(224),
-            transforms.RandomHorizontalFlip(), # Remove for MNIST
-            transforms.RandomRotation(10),
-            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
-            transforms.ToTensor()
-        ])
+
+        self.augmentation_fn = transforms.Compose(
+            [
+                transforms.Resize(230),
+                transforms.RandomCrop(224),
+                transforms.RandomHorizontalFlip(),  # Remove for MNIST
+                transforms.RandomRotation(10),
+                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+                transforms.ToTensor(),
+            ]
+        )
+
+        self.deep_cluster_and_contrastive_loss = deep_cluster_and_contrastive_loss
+        self.deep_cluster_and_ntxent_loss = deep_cluster_and_ntxent_loss
+
+        # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
+        file_prefix = []
+        file_prefix.append(
+            f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+        )  # Date & Time
+        file_prefix.append(f"{self.model}")
+        file_prefix.append(f"pca-{self.pca_method}")
+        file_prefix.append(f"clustering-{self.clustering_method}")
+        file_prefix.append(f"modeloptim-{str(self.optimizer).split(' ')[0]}")
+        file_prefix.append(f"tloptim-{str(self.optimizer_tl).split(' ')[0]}")
+        file_prefix.append(f"loss-{str(self.loss_criterion)[:-2]}")
 
         # Init metrics
         if self.metrics:
@@ -212,20 +231,24 @@ class DeepCluster(BaseEstimator):
             elif metrics_dir:
                 self.metrics_file = f"{metrics_dir}/{'_'.join(file_prefix)}.csv"
             else:
-                 # The File the metrics are stored at after each epoch
-                self.metrics_file = f"{BASE_METRICS}{self.dataset_name}/{'_'.join(file_prefix)}.csv"
-        
+                # The File the metrics are stored at after each epoch
+                self.metrics_file = (
+                    f"{BASE_METRICS}{self.dataset_name}/{'_'.join(file_prefix)}.csv"
+                )
+
         self.clustering = None
-        
+
         # Placeholder for the best accuracy of a Model at an epoch
         # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
         # Only a current best model will overwrite a previous best model, when the accuracy is greater than the previous one
-        self.best_model = 0.
-        
+        self.best_model = 0.0
+
         if self.checkpoint and not self.checkpoint_file:
-            self.checkpoint = f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
-        
-        # Random Seed Setting    
+            self.checkpoint = (
+                f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
+            )
+
+        # Random Seed Setting
         if seed:
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
@@ -252,19 +275,21 @@ class DeepCluster(BaseEstimator):
             print(f"Saving the current checkpoint at epoch {epoch + 1}..")
 
         if best_model:
-            filename = f'{self.checkpoint}.best' # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
-        
-        torch.save({
-            'epoch': epoch + 1,
-            # +1 since, when starting again, the algorithm should continue with the next epoch and not 'redo' this one
-            'model_state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-            'optimizer_tl': self.optimizer_tl.state_dict(),
-            'loss': self.loss_criterion,
-            'cluster_logs': self.cluster_logs,
-            'metrics_metadata': self.metrics_metadata,
-        },
-            filename)
+            filename = f"{self.checkpoint}.best"  # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+
+        torch.save(
+            {
+                "epoch": epoch + 1,
+                # +1 since, when starting again, the algorithm should continue with the next epoch and not 'redo' this one
+                "model_state_dict": self.model.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "optimizer_tl": self.optimizer_tl.state_dict(),
+                "loss": self.loss_criterion,
+                "cluster_logs": self.cluster_logs,
+                "metrics_metadata": self.metrics_metadata,
+            },
+            filename,
+        )
 
         return
 
@@ -300,7 +325,8 @@ class DeepCluster(BaseEstimator):
             end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
-            if self.verbose: print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
+            if self.verbose:
+                print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
             # Remove head
             self.model.top_layer = None
@@ -344,7 +370,7 @@ class DeepCluster(BaseEstimator):
                 batch_size=self.batch_size,
                 sampler=sampler,
                 pin_memory=True,
-                drop_last=True, # drop last for nt_xent_loss
+                drop_last=True,  # drop last for nt_xent_loss
             )
 
             # Add Top Layer
@@ -393,7 +419,7 @@ class DeepCluster(BaseEstimator):
 
             # Store psuedo-labels
             self.cluster_logs.append(labels)
-            
+
             # Print Metrics
             if self.metrics:
                 self.print_metrics(epoch)
@@ -404,18 +430,20 @@ class DeepCluster(BaseEstimator):
                 self.epoch_time.reset()
             # Store a best model:
             if self.best_model < pred_accuracy.numpy():
-                print(f'A new best model has been found:')
-                print(f'- Previous model: {self.best_model}')
-                print(f'- Current model: {pred_accuracy.numpy()}')
+                print("A new best model has been found:")
+                print(f"- Previous model: {self.best_model}")
+                print(f"- Current model: {pred_accuracy.numpy()}")
                 if self.checkpoint:
                     self.save_checkpoint(epoch=epoch, best_model=True)
                 self.best_model = pred_accuracy.numpy()
-            
-            if self.verbose: print('Creating new checkpoint..')
+
+            if self.verbose:
+                print("Creating new checkpoint..")
             if self.checkpoint:
                 self.save_checkpoint(epoch)
-            if self.verbose: print('Finished storing checkpoint')
-            
+            if self.verbose:
+                print("Finished storing checkpoint")
+
             del train_data
             del features
             del labels
@@ -516,30 +544,27 @@ class DeepCluster(BaseEstimator):
             _, predicted = output.max(1)
             # accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
 
-            contrastive_loss = self.calculate_contrastive_loss(input, target)
+            if self.deep_cluster_and_contrastive_loss:
+                print("Deep Cluster and Contrastive Loss")
+                contrastive_loss = self.calculate_contrastive_loss(input, target)
 
-            # add the contrastive loss to the contrastive losses tensor
-            contrastive_losses[i] = contrastive_loss.item()
-            
-            # print("This is the contrastive loss", contrastive_loss)
-            # print(contrastive_loss.shape)
-            
-            ntxent_loss = self.calculate_nt_xent_loss(input)
-            print("This is the ntxent loss", ntxent_loss)
-            
-            ntxent_losses[i] = ntxent_loss.item()
+                # add the contrastive loss to the contrastive losses tensor
+                contrastive_losses[i] = contrastive_loss.item()
+                # print("This is the contrastive loss", contrastive_loss)
+                # print(contrastive_loss.shape)
+                loss = deep_clusster_loss + contrastive_loss
 
-            # combine the deep cluster loss and the contrastive loss
-            # loss = deep_clusster_loss + contrastive_loss
-            
-            # comobine the deep cluster loss and the ntxent loss
-            loss = deep_clusster_loss + ntxent_loss
-            
-            print("This is the combined loss", loss)
-            print(loss.shape)
-            
-            # Lets see if the nans also come when not using contrastive loss
-            # loss = deep_clusster_loss
+            elif self.deep_cluster_and_ntxent_loss:
+                print("Contrastive Deep Cluster and NT-Xent Loss")
+                ntxent_loss = self.calculate_nt_xent_loss(input)
+                # print("This is the ntxent loss", ntxent_loss)
+                # ntxent_losses[i] = ntxent_loss.item()
+                # comobine the deep cluster loss and the ntxent loss
+                loss = deep_clusster_loss + ntxent_loss
+
+            else:
+                print("Normal Deep Cluster Loss")
+                loss = deep_clusster_loss
 
             # add the loss to the losses tensor
             losses[i] = loss.item()
@@ -552,7 +577,16 @@ class DeepCluster(BaseEstimator):
             self.optimizer_tl.step()
 
             # Free up GPU memory
-            del input, target, output, loss, contrastive_loss, ntxent_loss
+            del (
+                input,
+                target,
+                output,
+                loss,
+            )
+            if self.deep_cluster_and_contrastive_loss:
+                del contrastive_loss
+            if self.deep_cluster_and_ntxent_loss:
+                del ntxent_loss
             torch.cuda.empty_cache()
 
             # Train Metrics
@@ -569,7 +603,7 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
             ntxent_losses,
         )
-        
+
     def calculate_contrastive_loss(self, input: Tensor, target: Tensor) -> Tensor:
         # Computing Features for Contrastive Loss
         features = self.compute_features_for_batch(input)
@@ -578,23 +612,26 @@ class DeepCluster(BaseEstimator):
         features = features.cpu()
         target = target.cpu()
         contrastive_loss = self.contrastive_criterion(features, target)
-        
+
         del features
-        
+
         return contrastive_loss
-    
+
     def calculate_nt_xent_loss(self, samples: Tensor) -> Tensor:
-        x1 = torch.stack([self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples])
-        x2 = torch.stack([self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples])
-        
+        x1 = torch.stack(
+            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
+        )
+        x2 = torch.stack(
+            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
+        )
+
         x1_features = self.compute_features_for_batch(x1)
         x2_features = self.compute_features_for_batch(x2)
-        
+
         # calculate contrastive loss of augmentations
         loss = self.nt_xent_loss(x1_features, x2_features)
-        
+
         return loss
-        
 
     @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
@@ -728,15 +765,15 @@ class DeepCluster(BaseEstimator):
         """
         if self.metrics:
             end = time.time()
-        
+
         # Set clustering algorithm when clustering is not set yet or reassign is active
         if not self.clustering or self.reassign_clustering:
-            if self.clustering_method == 'faiss':
+            if self.clustering_method == "faiss":
                 self.clustering = faiss_kmeans.Kmeans(self.k)
-            elif self.clustering_method == 'sklearn':
+            elif self.clustering_method == "sklearn":
                 self.clustering = KMeans(n_clusters=self.k)
-           
-        if self.clustering_method == 'faiss':
+
+        if self.clustering_method == "faiss":
             _ = self.clustering.cluster(features, verbose=self.verbose)
             labels = faiss_kmeans.arrange_clustering(self.clustering.images_lists)
         elif self.clustering_method == "sklearn":
@@ -800,8 +837,10 @@ class DeepCluster(BaseEstimator):
 
         print("Normalized Mutual Information Scores:")
         if len(self.cluster_logs) > 0:
-            nmi_epoch = normalized_mutual_info_score(pseudo_labels, self.cluster_logs[-1])
-            print(f'- epoch {epoch} and current epoch {epoch+1}: {nmi_epoch}')
+            nmi_epoch = normalized_mutual_info_score(
+                pseudo_labels, self.cluster_logs[-1]
+            )
+            print(f"- epoch {epoch} and current epoch {epoch+1}: {nmi_epoch}")
         else:
             nmi_epoch = 0.0
 

@@ -33,11 +33,18 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=500)
 
     # Dataset
-    parser.add_argument('--dataset', type=str, choices=datasets.AVAILABLE_DATASETS, default='MNIST')
-    parser.add_argument('--data_dir', type=str, default='./data')
-    parser.add_argument('--ds_train', action='store_true')
-    parser.add_argument('--ds_split', type=str, choices=['train', 'test', 'unlabeled', 'train+unlabeled', 'val'], default='train')
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument(
+        "--dataset", type=str, choices=datasets.AVAILABLE_DATASETS, default="MNIST"
+    )
+    parser.add_argument("--data_dir", type=str, default="./data")
+    parser.add_argument("--ds_train", action="store_true")
+    parser.add_argument(
+        "--ds_split",
+        type=str,
+        choices=["train", "test", "unlabeled", "train+unlabeled", "val"],
+        default="train",
+    )
+    parser.add_argument("--batch_size", type=int, default=256)
 
     # Optimizer (Main)
     parser.add_argument(
@@ -96,20 +103,26 @@ def parse_args():
     )
 
     # Metrics
-    parser.add_argument('--metrics', action='store_true')
-    parser.add_argument('--metrics_file', type=str, default=None)
-    parser.add_argument('--metrics_dir', type=str, default=None)
+    parser.add_argument("--metrics", action="store_true")
+    parser.add_argument("--metrics_file", type=str, default=None)
+    parser.add_argument("--metrics_dir", type=str, default=None)
 
     # Checkpoints
-    parser.add_argument('--checkpoint', action='store_true') # Activate Checkpoints
-    parser.add_argument('--checkpoint_file', type=str, default=None) # Resume with a checkpoint file
+    parser.add_argument("--checkpoint", action="store_true")  # Activate Checkpoints
+    parser.add_argument(
+        "--checkpoint_file", type=str, default=None
+    )  # Resume with a checkpoint file
 
     # Verbose
     parser.add_argument("--verbose", "-v", action="store_true")
 
     # Seed
-    parser.add_argument('--seed', type=int, default=None)
-    
+    parser.add_argument("--seed", type=int, default=None)
+
+    # Contrastive Strategies
+    parser.add_argument("--deep_cluster_and_contrastive_loss", action="store_true")
+    parser.add_argument("--deep_cluster_and_ntxent_loss", action="store_true")
+
     return parser.parse_args()
 
 
@@ -226,7 +239,9 @@ def main(args):
         metrics=args.metrics,
         metrics_file=args.metrics_file,
         metrics_metadata=str(args),
-        seed=args.seed
+        seed=args.seed,
+        deep_cluster_and_contrastive_loss=args.deep_cluster_and_contrastive_loss,
+        deep_cluster_and_ntxent_loss=args.deep_cluster_and_ntxent_loss,
     )
 
     print("Running model...")
