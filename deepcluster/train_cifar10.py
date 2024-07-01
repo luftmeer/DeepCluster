@@ -12,7 +12,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import transforms as T
 
 from deepcluster import DeepCluster
-from models.ResNet import resnet18, resnet34
+from models.ResNet import resnet18, resnet34, resnet50
 from models.FeedForward import FeedForward
 
 
@@ -58,7 +58,7 @@ def train_cifar10(args):
             T.ToTensor(),
             T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
         ])
-        model = resnet18()
+        model = resnet50()
 
     elif args.model == "FeedForward":
         ca_transform = T.Compose([
@@ -101,12 +101,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Training Cifar10 Dataset with DeepCluster")
 
-    parser.add_argument("--model", type=str, required=True, choices=MODELS)
-    parser.add_argument("--k", type=int, required=True, default=K)
-    parser.add_argument("--epochs", type=int, required=True, default=EPOCHS)
-    parser.add_argument("--lr", type=float, required=True, default=L_RATE)
-    parser.add_argument("--batch", type=int, required=True, default=B_SIZE)
-    parser.add_argument("--verbose", type=bool, required=True, default=False)
+    parser.add_argument("--model", type=str, choices=MODELS, default=MODELS[0])
+    parser.add_argument("--k", type=int, default=K)
+    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--lr", type=float, default=L_RATE)
+    parser.add_argument("--batch", type=int, default=B_SIZE)
+    parser.add_argument("--verbose", type=bool, default=True)
 
     args = parser.parse_args()
     train_cifar10(args)

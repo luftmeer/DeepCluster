@@ -69,7 +69,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, n_blocks: iter, img_channels: int = 3, num_classes: int = 1000, sobel = False):
+    def __init__(self, block, n_blocks: iter, img_channels: int = 3, num_classes: int = 1000, sobel=False):
         super(ResNet, self).__init__()
         self.in_channels: int = 64
         self.sobel = sobel
@@ -90,7 +90,7 @@ class ResNet(nn.Module):
         )
         self.classifier = nn.Sequential()
         self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
-        
+
         if sobel:
             grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
             grayscale.weight.data.fill_(1.0 / 3.0)
