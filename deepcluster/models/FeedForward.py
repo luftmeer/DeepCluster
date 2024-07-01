@@ -6,6 +6,7 @@ class FeedForward(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(FeedForward, self).__init__()
         self.features = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(input_dim, 500),
             nn.ReLU(inplace=True),
             nn.Linear(500, 500),

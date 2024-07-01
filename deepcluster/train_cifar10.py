@@ -12,6 +12,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import transforms as T
 
 from deepcluster import DeepCluster
+from utils.datasets import dataset_loader
 from models.ResNet import resnet18, resnet34, resnet50
 from models.FeedForward import FeedForward
 
@@ -22,7 +23,9 @@ L_RATE = 0.05
 B_SIZE = 64
 MOMENTUM = 0.9
 W_DECAY = 10 ** -5
-MODELS = ("ResNet", "FeedForward")
+BETAS = (0.9, 0.999)
+MODELS = ("FeedForward", "ResNet")
+OPTIM = ("SGD", "Adam")
 
 
 def prepare_cifar10_for(model: str, b_size: int) -> DataLoader:
@@ -58,7 +61,7 @@ def train_cifar10(args):
             T.ToTensor(),
             T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
         ])
-        model = resnet50()
+        model = resnet18()
 
     elif args.model == "FeedForward":
         ca_transform = T.Compose([
@@ -72,10 +75,19 @@ def train_cifar10(args):
     else:
         raise ValueError
 
-    ## Initialize training parameters
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
-    optimizer_tl = optim.SGD(model.top_layer.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
+    ## Initialize optimizers (both same)
+    if args.optim == "SGD":
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
+        optimizer_tl = optim.SGD(model.top_layer.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
+
+    elif args.optim == "Adam":
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=BETAS, weight_decay=W_DECAY)
+        optimizer_tl = optim.Adam(model.top_layer.parameters(), lr=args.lr, betas=BETAS, weight_decay=W_DECAY)
+
+    else:
+        raise ValueError
+
+    ## Initialize DeepCluster
     DC_model = DeepCluster(
         ## User inputs
         model=model,
@@ -84,7 +96,7 @@ def train_cifar10(args):
         k=args.k,
         verbose=args.verbose,
         ## Fixed inputs
-        loss_criterion=criterion,
+        loss_criterion=nn.CrossEntropyLoss(),
         optim=optimizer,
         optim_tl=optimizer_tl,
         pca_reduction=3,
@@ -92,8 +104,12 @@ def train_cifar10(args):
         dataset_name="CIFAR",
         clustering_method='sklearn'
     )
-    ## Train model
-    train_loader = prepare_cifar10_for(args.model, args.batch)
+
+    ## TODO: Fix this for FeedForward:
+    train_loader = prepare_cifar10_for(args.model, args.batch)          ## fixme: Mismatched dimensions
+    # train_loader = dataset_loader("CIFAR10", "../data", args.batch)   ## fixme: Too many values unpack (expected 2)
+
+    ## TODO: Fix ResNet for this to work.
     DC_model.fit(train_loader)
 
 
@@ -102,6 +118,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Training Cifar10 Dataset with DeepCluster")
 
     parser.add_argument("--model", type=str, choices=MODELS, default=MODELS[0])
+    parser.add_argument("--optim", type=str, choices=OPTIM, default=OPTIM[0])
     parser.add_argument("--k", type=int, default=K)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--lr", type=float, default=L_RATE)
