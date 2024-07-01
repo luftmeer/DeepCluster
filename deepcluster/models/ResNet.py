@@ -23,7 +23,7 @@ class BasicBlock(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         identity = x
         if self.downsample is not None:
-            identity = self.downsample(x)
+            x = self.downsample(x)
 
         out = self.conv1(x)
         out = self.conv2(out)
@@ -72,6 +72,7 @@ class ResNet(nn.Module):
     def __init__(self, block, n_blocks: iter, img_channels: int = 3, num_classes: int = 1000, sobel = False):
         super(ResNet, self).__init__()
         self.in_channels: int = 64
+        self.sobel = sobel
 
         self.features = nn.Sequential(
             ## Layer 1
@@ -87,7 +88,7 @@ class ResNet(nn.Module):
             self._make_layer(block, 512, n_blocks[3], 2),
             nn.AdaptiveAvgPool2d(output_size=(1, 1))
         )
-        self.classifier = nn.Linear(512, 512)
+        self.classifier = nn.Sequential()
         self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
         
         if sobel:
@@ -129,6 +130,7 @@ class ResNet(nn.Module):
             out = self.sobel(out)
         out = self.features(out)
         out = out.view(out.size(0), -1)
+        out = self.classifier(out)  ## TBD
         out = self.top_layer(out)
 
         return out

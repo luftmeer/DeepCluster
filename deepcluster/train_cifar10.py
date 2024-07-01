@@ -22,42 +22,92 @@ L_RATE = 0.05
 B_SIZE = 64
 MOMENTUM = 0.9
 W_DECAY = 10 ** -5
-BETAS = (0.9, 0.999)
-TRANSFORM = T.Compose([
-    T.Resize(256),
-    T.CenterCrop(224),
-    T.ToTensor(),
-    T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
-])
-CA_TRANSFORM = T.Compose([
-    T.ToPILImage(),
-    T.RandomResizedCrop(224),
-    T.RandomHorizontalFlip(),
-    T.ToTensor(),
-    T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
-])
+MODELS = ("ResNet", "FeedForward")
 
-train_set = CIFAR10("../data", train=True, transform=TRANSFORM, download=True)
-train_loader = DataLoader(train_set, batch_size=B_SIZE, shuffle=True)
 
-model = resnet18()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=L_RATE, momentum=MOMENTUM, weight_decay=W_DECAY)
-optimizer_tl = optim.SGD(model.top_layer.parameters(), lr=L_RATE, momentum=MOMENTUM, weight_decay=W_DECAY)
+def prepare_cifar10_for(model: str, b_size: int) -> DataLoader:
+    if model == "ResNet":
+        transform = T.Compose([
+            T.Resize(256),
+            T.CenterCrop(224),
+            T.ToTensor(),
+            T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
+        ])
+    elif model == "FeedForward":
+        transform = T.Compose([
+            T.ToTensor(),
+            T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
+        ])
+    else:
+        raise ValueError
 
-DC_model = DeepCluster(
-    model=model,
-    optim=optimizer,
-    loss_criterion=criterion,
-    optim_tl=optimizer_tl,
-    k=K,
-    batch_size=B_SIZE,
-    verbose=True,
-    pca_reduction=3,
-    cluster_assign_tf=CA_TRANSFORM,
-    epochs=EPOCHS,
-    dataset_name="CIFAR",
-    clustering_method='sklearn'
-)
+    train_set = CIFAR10("../data", train=True, transform=transform, download=True)
+    train_loader = DataLoader(train_set, batch_size=b_size, shuffle=True)
 
-DC_model.fit(train_loader)
+    return train_loader
+
+
+def train_cifar10(args):
+
+    ## Initialize model (only resnet18) and data transformation
+    if args.model == "ResNet":
+        ca_transform = T.Compose([
+            T.ToPILImage(),
+            T.RandomResizedCrop(224),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+            T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
+        ])
+        model = resnet18()
+
+    elif args.model == "FeedForward":
+        ca_transform = T.Compose([
+            T.ToPILImage(),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+            T.Normalize(mean=(0.48900422, 0.47554612, 0.4395709), std=(0.23639396, 0.23279834, 0.24998063))
+        ])
+        model = FeedForward(3*32*32, 10)
+
+    else:
+        raise ValueError
+
+    ## Initialize training parameters
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
+    optimizer_tl = optim.SGD(model.top_layer.parameters(), lr=args.lr, momentum=MOMENTUM, weight_decay=W_DECAY)
+    DC_model = DeepCluster(
+        ## User inputs
+        model=model,
+        epochs=args.epochs,
+        batch_size=args.batch,
+        k=args.k,
+        verbose=args.verbose,
+        ## Fixed inputs
+        loss_criterion=criterion,
+        optim=optimizer,
+        optim_tl=optimizer_tl,
+        pca_reduction=3,
+        cluster_assign_tf=ca_transform,
+        dataset_name="CIFAR",
+        clustering_method='sklearn'
+    )
+    ## Train model
+    train_loader = prepare_cifar10_for(args.model, args.batch)
+    DC_model.fit(train_loader)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Training Cifar10 Dataset with DeepCluster")
+
+    parser.add_argument("--model", type=str, required=True, choices=MODELS)
+    parser.add_argument("--k", type=int, required=True, default=K)
+    parser.add_argument("--epochs", type=int, required=True, default=EPOCHS)
+    parser.add_argument("--lr", type=float, required=True, default=L_RATE)
+    parser.add_argument("--batch", type=int, required=True, default=B_SIZE)
+    parser.add_argument("--verbose", type=bool, required=True, default=False)
+
+    args = parser.parse_args()
+    train_cifar10(args)
+
