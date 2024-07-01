@@ -1,6 +1,7 @@
 from torch import nn
 import torch
 
+
 class FeedForward(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(FeedForward, self).__init__()

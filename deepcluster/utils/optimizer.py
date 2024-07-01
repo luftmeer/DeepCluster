@@ -3,7 +3,7 @@ OPTIMIZERS = ['SGD', 'Adam']
 
 
 def optimizer_loader(optimizer_name: str, parameter: nn.parameter.Parameter, **kwargs) -> optim:
-    """Wrapper Function for loading any Optimizer in the torich library for the DeepCluster Use Case.
+    """Wrapper Function for loading any Optimizer in the torch library for the DeepCluster Use Case.
 
     Parameters
     ----------
