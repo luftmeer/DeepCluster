@@ -8,16 +8,15 @@ import time
 
 import faiss
 import numpy as np
-from PIL import Image
-from PIL import ImageFile
-from scipy.sparse import csr_matrix, find
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+from PIL import Image, ImageFile
+from scipy.sparse import csr_matrix, find
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-__all__ = ['PIC', 'Kmeans', 'cluster_assign', 'arrange_clustering']
+__all__ = ["PIC", "Kmeans", "cluster_assign", "arrange_clustering"]
 
 
 def pil_loader(path):
@@ -27,9 +26,9 @@ def pil_loader(path):
     Returns:
         Image
     """
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         img = Image.open(f)
-        return img.convert('RGB')
+        return img.convert("RGB")
 
 
 class ReassignedDataset(data.Dataset):
@@ -68,13 +67,15 @@ class ReassignedDataset(data.Dataset):
         """
         img, pseudolabel = self.imgs[index]
         true_target = self.true_targets[index]
-        #img = pil_loader(path)
+        # img = pil_loader(path)
         if self.transform is not None:
+
             img = self.transform(img)
         return img, pseudolabel, true_target
 
     def __len__(self):
         return len(self.imgs)
+
 
 # Add whitening input for analytical purposes
 def preprocess_features(npdata, pca=256, whitening=True):
@@ -86,14 +87,14 @@ def preprocess_features(npdata, pca=256, whitening=True):
         np.array of dim N * pca: data PCA-reduced, whitened and L2-normalized
     """
     _, ndim = npdata.shape
-    npdata =  npdata.astype('float32')
+    npdata = npdata.astype("float32")
 
     # Apply PCA-whitening with Faiss
     if whitening:
         eigen_power = -0.5
     else:
         eigen_power = 0.0
-    mat = faiss.PCAMatrix (ndim, pca, eigen_power=eigen_power)
+    mat = faiss.PCAMatrix(ndim, pca, eigen_power=eigen_power)
     mat.train(npdata)
     assert mat.is_trained
     npdata = mat.apply_py(npdata)
@@ -127,6 +128,7 @@ def make_graph(xb, nnn):
     D, I = index.search(xb, nnn + 1)
     return I, D
 
+
 # Added a custom transform input for the training data
 def cluster_assign(images_lists, dataset, transform):
     """Creates a dataset from clustering, with clusters as labels.
@@ -144,7 +146,6 @@ def cluster_assign(images_lists, dataset, transform):
     for cluster, images in enumerate(images_lists):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
-
 
     return ReassignedDataset(image_indexes, pseudolabels, dataset, transform)
 
@@ -180,7 +181,7 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     _, I = index.search(x, 1)
     losses = faiss.vector_to_array(clus.centroids)
     if verbose:
-        print('k-means loss evolution: {0}'.format(losses))
+        print("k-means loss evolution: {0}".format(losses))
 
     return [int(n[0]) for n in I], losses[-1]
 
@@ -201,8 +202,8 @@ class Kmeans(object):
 
     def cluster(self, data, verbose=False):
         """Performs k-means clustering.
-            Args:
-                x_data (np.array N * dim): data to cluster
+        Args:
+            x_data (np.array N * dim): data to cluster
         """
         end = time.time()
         # Removed data preprocessing and left it inside deepcluster algorithm
@@ -213,7 +214,7 @@ class Kmeans(object):
             self.images_lists[I[i]].append(i)
 
         if verbose:
-            print('k-means time: {0:.0f} s'.format(time.time() - end))
+            print("k-means time: {0:.0f} s".format(time.time() - end))
 
         return loss
 
@@ -258,12 +259,12 @@ def run_pic(I, D, sigma, alpha):
     v0 = np.ones(nim) / nim
 
     # power iterations
-    v = v0.astype('float32')
+    v = v0.astype("float32")
 
     t0 = time.time()
     dt = 0
     for i in range(200):
-        vnext = np.zeros(nim, dtype='float32')
+        vnext = np.zeros(nim, dtype="float32")
 
         vnext = vnext + W.transpose().dot(v)
 
@@ -280,7 +281,7 @@ def run_pic(I, D, sigma, alpha):
 
 def find_maxima_cluster(W, v):
     n, m = W.shape
-    assert (n == m)
+    assert n == m
     assign = np.zeros(n)
     # for each node
     pointers = list(range(n))
@@ -307,27 +308,29 @@ def find_maxima_cluster(W, v):
             current_node = pointers[current_node]
 
         assign[i] = cluster_ids[current_node]
-        assert (assign[i] >= 0)
+        assert assign[i] >= 0
     return assign
 
 
 class PIC(object):
     """Class to perform Power Iteration Clustering on a graph of nearest neighbors.
-        Args:
-            args: for consistency with k-means init
-            sigma (float): bandwidth of the Gaussian kernel (default 0.2)
-            nnn (int): number of nearest neighbors (default 5)
-            alpha (float): parameter in PIC (default 0.001)
-            distribute_singletons (bool): If True, reassign each singleton to
-                                      the cluster of its closest non
-                                      singleton nearest neighbors (up to nnn
-                                      nearest neighbors).
-        Attributes:
-            images_lists (list of list): for each cluster, the list of image indexes
-                                         belonging to this cluster
+    Args:
+        args: for consistency with k-means init
+        sigma (float): bandwidth of the Gaussian kernel (default 0.2)
+        nnn (int): number of nearest neighbors (default 5)
+        alpha (float): parameter in PIC (default 0.001)
+        distribute_singletons (bool): If True, reassign each singleton to
+                                  the cluster of its closest non
+                                  singleton nearest neighbors (up to nnn
+                                  nearest neighbors).
+    Attributes:
+        images_lists (list of list): for each cluster, the list of image indexes
+                                     belonging to this cluster
     """
 
-    def __init__(self, args=None, sigma=0.2, nnn=5, alpha=0.001, distribute_singletons=True):
+    def __init__(
+        self, args=None, sigma=0.2, nnn=5, alpha=0.001, distribute_singletons=True
+    ):
         self.sigma = sigma
         self.alpha = alpha
         self.nnn = nnn
@@ -373,5 +376,5 @@ class PIC(object):
             self.images_lists.append(images_lists[c])
 
         if verbose:
-            print('pic time: {0:.0f} s'.format(time.time() - end))
+            print("pic time: {0:.0f} s".format(time.time() - end))
         return 0
