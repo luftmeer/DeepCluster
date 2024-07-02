@@ -166,6 +166,7 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int, train: boo
         dataset=dataset, 
         batch_size=batch_size,
         pin_memory=True,
+        sampler=data.SequentialSampler(dataset),
     )
     
     return train_loader
