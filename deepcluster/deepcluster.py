@@ -85,7 +85,8 @@ class DeepCluster(BaseEstimator):
         optim_tl_beta1: float = 0.9,
         optim_tl_beta2: float = 0.999,
         seed: int = None,
-        deep_cluster_and_contrastive_loss: bool = False,
+        contrastive_strategy_1: bool = False,
+        contrastive_strategy_2: bool = False,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
@@ -196,7 +197,9 @@ class DeepCluster(BaseEstimator):
             ]
         )
 
-        self.deep_cluster_and_contrastive_loss = deep_cluster_and_contrastive_loss
+        # flags for different contrastive strategies
+        self.contrastive_strategy_1 = contrastive_strategy_1
+        self.contrastive_strategy_2 = contrastive_strategy_2
 
         # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
         file_prefix = []
@@ -540,7 +543,7 @@ class DeepCluster(BaseEstimator):
             for true in true_target:
                 true_labels.append(true.item())
 
-            if self.deep_cluster_and_contrastive_loss:
+            if self.contrastive_strategy_1:
                 contrastive_loss = self.calculate_contrastive_loss(input, target)
 
                 # add the contrastive loss to the contrastive losses tensor
@@ -567,8 +570,165 @@ class DeepCluster(BaseEstimator):
                 output,
                 loss,
             )
-            if self.deep_cluster_and_contrastive_loss:
+            if self.contrastive_strategy_1:
                 del contrastive_loss
+            torch.cuda.empty_cache()
+
+            # Train Metrics
+            if self.metrics:
+                self.train_time.update(time.time() - end)
+                end = time.time()
+
+        predicted_labels = np.array(predicted_labels)
+        true_labels = np.array(true_labels)
+
+        # calculate unsupervised clustering accuracy
+        true_accuracy = unsupervised_clustering_accuracy(predicted_labels, true_labels)
+
+        true_accuracy = torch.tensor(true_accuracy)
+
+        # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
+        return (
+            losses,
+            accuracy_metric.compute(),
+            true_accuracy,
+            deep_clusster_losses,
+            contrastive_losses,
+        )
+
+    def train_positive_pairs(self, train_data: data.DataLoader) -> tuple:
+        """Training method for each epoch using the training dataset.
+
+        Parameters
+        ----------
+        train_data: data.DataLoader
+            Training dataset for the CNN model.
+
+        Returns
+        -------
+        float: The average loss from the training.
+        """
+        # Set model to train mode
+        self.model.train()
+
+        accuracy_metric = MulticlassAccuracy()
+
+        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        contrastive_losses = torch.zeros(
+            len(train_data), dtype=torch.float32, requires_grad=False
+        )
+        deep_clusster_losses = torch.zeros(
+            len(train_data) * 2, dtype=torch.float32, requires_grad=False
+        )
+
+        predicted_labels = []
+        true_labels = []
+
+        if self.reassign_optimizer_tl:
+            if str(self.optimizer_tl).split(" ")[0] == "SGD":
+                self.optimizer_tl = optim.SGD(
+                    self.model.top_layer.parameters(),
+                    lr=self.optim_tl_lr,
+                    momentum=self.optim_tl_momentum,
+                    weight_decay=self.optim_tl_weight_decay,
+                )
+            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
+                self.optimizer_tl = optim.Adam(
+                    self.model.top_layer.parameters(),
+                    lr=self.optim_tl_lr,
+                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
+                    weight_decay=self.optim_tl_weight_decay,
+                )
+
+        if self.metrics:
+            end = time.time()
+        for i, (input, target, true_target) in tqdm(
+            enumerate(train_data), desc="Training", total=len(train_data)
+        ):
+            input_1 = input[0].to(self.device)
+            input_2 = input[1].to(self.device)
+            target_1 = target[0].type(torch.LongTensor).to(self.device)
+            target_2 = target[1].type(torch.LongTensor).to(self.device)
+
+            true_target_1 = true_target[0].type(torch.LongTensor).to(self.device)
+            true_target_2 = true_target[1].type(torch.LongTensor).to(self.device)
+
+            if self.requires_grad:
+                input_1.requires_grad = True
+                input_2.requires_grad = True
+
+            # Forward pass
+            output_1 = self.model(input_1)
+            output_2 = self.model(input_2)
+
+            deep_clusster_loss_1 = self.loss_criterion(output_1, target)
+            deep_clusster_loss_2 = self.loss_criterion(output_2, target)
+
+            accuracy_metric.update(output_1, target_1)
+            accuracy_metric.update(output_2, target_2)
+            # check Nan Loss
+            if torch.isnan(deep_clusster_loss_1):
+                print("targets", target_1)
+                print("Output", output_1)
+                print("Input", input_1)
+                print("Nan Loss", deep_clusster_loss_1)
+
+            if torch.isnan(deep_clusster_loss_2):
+                print("targets", target_2)
+                print("Output", output_2)
+                print("Input", input_2)
+                print("Nan Loss", deep_clusster_loss_2)
+
+            if torch.isnan(deep_clusster_loss_1) or torch.isnan(deep_clusster_loss_2):
+                break
+
+            # add the deep cluster loss to the deep cluster losses tensor
+            deep_clusster_losses[2 * i] = deep_clusster_loss_1.item()
+            deep_clusster_losses[2 * i + 1] = deep_clusster_loss_2.item()
+
+            for tar in target_1:
+                predicted_labels.append(tar.item())
+
+            for tar in target_2:
+                predicted_labels.append(tar.item())
+
+            for true in true_target_1:
+                true_labels.append(true.item())
+
+            for true in true_target_2:
+                true_labels.append(true.item())
+
+            contrastive_loss = self.nt_xent_loss(input_1, input_2)
+
+            # add the contrastive loss to the contrastive losses tensor
+            contrastive_losses[i] = contrastive_loss.item()
+            loss = deep_clusster_loss_1 + deep_clusster_loss_2 + contrastive_loss
+
+            # add the loss to the losses tensor
+            losses[i] = loss.item()
+
+            # Backward pass and optimize
+            self.optimizer.zero_grad()
+            self.optimizer_tl.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            self.optimizer_tl.step()
+
+            # Free up GPU memory
+            del (
+                input,
+                target,
+                output_1,
+                contrastive_loss,
+                loss,
+                output_2,
+                input_1,
+                input_2,
+                target_1,
+                target_2,
+                true_target_1,
+                true_target_2,
+            )
             torch.cuda.empty_cache()
 
             # Train Metrics
