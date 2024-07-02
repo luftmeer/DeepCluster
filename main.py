@@ -121,7 +121,6 @@ def parse_args():
 
     # Contrastive Strategies
     parser.add_argument("--deep_cluster_and_contrastive_loss", action="store_true")
-    parser.add_argument("--deep_cluster_and_ntxent_loss", action="store_true")
 
     return parser.parse_args()
 
@@ -241,7 +240,6 @@ def main(args):
         metrics_metadata=str(args),
         seed=args.seed,
         deep_cluster_and_contrastive_loss=args.deep_cluster_and_contrastive_loss,
-        deep_cluster_and_ntxent_loss=args.deep_cluster_and_ntxent_loss,
     )
 
     print("Running model...")
