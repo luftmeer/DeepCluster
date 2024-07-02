@@ -533,9 +533,9 @@ class DeepCluster(BaseEstimator):
 
             # calculate accuracy and add it to accuracies tensor
             _, predicted = output.max(1)
-            # accuracies[i] = predicted.eq(target).sum().item() / target.size(0)
-            for pred in predicted:
-                predicted_labels.append(pred.item())
+
+            for tar in target:
+                predicted_labels.append(tar.item())
 
             for true in true_target:
                 true_labels.append(true.item())
