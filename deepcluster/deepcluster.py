@@ -39,7 +39,6 @@ METRICS_HEADER = [
     "loss_avg",
     "contrastive_loss_avg",
     "deep_cluster_loss_avg",
-    "ntxent_loss_avg",
     "accuracy",
     "true_accuracy",
     "nmi_true_pred",
@@ -86,7 +85,6 @@ class DeepCluster(BaseEstimator):
         optim_tl_beta2: float = 0.999,
         seed: int = None,
         deep_cluster_and_contrastive_loss: bool = False,
-        deep_cluster_and_ntxent_loss: bool = False,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
@@ -198,7 +196,6 @@ class DeepCluster(BaseEstimator):
         )
 
         self.deep_cluster_and_contrastive_loss = deep_cluster_and_contrastive_loss
-        self.deep_cluster_and_ntxent_loss = deep_cluster_and_ntxent_loss
 
         # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
         file_prefix = []
@@ -219,7 +216,6 @@ class DeepCluster(BaseEstimator):
             self.loss_overall_avg = Meter()
             self.contrastive_loss_overall_avg = Meter()
             self.deep_cluster_loss_overall_avg = Meter()
-            self.ntxent_loss_overall_avg = Meter()
             self.accuracy_overall_avg = Meter()
             self.true_accuracy_overall_avg = Meter()
             self.features_time = Meter()
@@ -388,13 +384,11 @@ class DeepCluster(BaseEstimator):
                 true_accuracy,
                 deep_cluster_losses,
                 contrastive_losses,
-                ntxent_losses,
             ) = self.train(train_data)
 
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
                 self.contrastive_loss_overall_avg.update(torch.mean(contrastive_losses))
-                self.ntxent_loss_overall_avg.update(torch.mean(ntxent_losses))
                 self.deep_cluster_loss_overall_avg.update(
                     torch.mean(deep_cluster_losses)
                 )
@@ -490,9 +484,6 @@ class DeepCluster(BaseEstimator):
         deep_clusster_losses = torch.zeros(
             len(train_data), dtype=torch.float32, requires_grad=False
         )
-        ntxent_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
 
         if self.reassign_optimizer_tl:
             if str(self.optimizer_tl).split(" ")[0] == "SGD":
@@ -549,11 +540,6 @@ class DeepCluster(BaseEstimator):
                 contrastive_losses[i] = contrastive_loss.item()
                 loss = deep_clusster_loss + contrastive_loss
 
-            elif self.deep_cluster_and_ntxent_loss:
-                ntxent_loss = self.calculate_nt_xent_loss(input)
-                # comobine the deep cluster loss and the ntxent loss
-                loss = deep_clusster_loss + ntxent_loss
-
             else:
                 loss = deep_clusster_loss
 
@@ -576,8 +562,6 @@ class DeepCluster(BaseEstimator):
             )
             if self.deep_cluster_and_contrastive_loss:
                 del contrastive_loss
-            if self.deep_cluster_and_ntxent_loss:
-                del ntxent_loss
             torch.cuda.empty_cache()
 
             # Train Metrics
@@ -592,7 +576,6 @@ class DeepCluster(BaseEstimator):
             true_accuracy_metric.compute(),
             deep_clusster_losses,
             contrastive_losses,
-            ntxent_losses,
         )
 
     def calculate_contrastive_loss(self, input: Tensor, target: Tensor) -> Tensor:
@@ -909,7 +892,6 @@ class DeepCluster(BaseEstimator):
                 torch.mean(self.loss_overall_avg.val).numpy(),
                 torch.mean(self.contrastive_loss_overall_avg.val).numpy(),
                 torch.mean(self.deep_cluster_loss_overall_avg.val).numpy(),
-                torch.mean(self.ntxent_loss_overall_avg.val).numpy(),
                 torch.mean(self.accuracy_overall_avg.val).numpy(),
                 torch.mean(self.true_accuracy_overall_avg.val).numpy(),
                 nmi,
