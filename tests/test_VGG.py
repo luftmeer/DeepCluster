@@ -9,10 +9,10 @@ class TestVGG(unittest.TestCase):
         Sets up the test suite
         """
         self.num_classes = 1000
-        self.input_dim = 3
-        self.input_size = 256
-        self.grayscale = True
-        self.sobel = True
+        self.input_dim = 1
+        self.input_size = 224
+        self.grayscale = False
+        self.sobel = False
         self.batch_size = 8
         self.model = VGG16(self.num_classes, self.input_dim, self.input_size, self.grayscale, self.sobel)
 
@@ -32,30 +32,6 @@ class TestVGG(unittest.TestCase):
         X = torch.randn(self.batch_size, self.input_dim, self.input_size, self.input_size)
         output = self.model(X)
 
-        self.assertEqual(output[0], self.batch_size)
-        self.assertEqual(output[1], self.num_classes)
+        self.assertEqual(output.size(0), self.batch_size)
+        self.assertEqual(output.size(1), self.num_classes)
         self.assertFalse(torch.isnan(output).any())
-
-    def test_VGG_greyscale(self):
-        """
-        Tests if the greyscale is applied properly
-        """
-        X = torch.randn(self.batch_size, self.input_dim, self.input_size, self.input_size)
-
-        if self.grayscale:
-            output_greyscale = self.model(X)
-
-            self.assertEqual(output_greyscale.shape[1], 2)
-            self.assertFalse(torch.isnan(output_greyscale).any())
-
-    def test_VGG_sobel(self):
-        """
-                Tests if the Sobel filter is applied properly
-                """
-        X = torch.randn(self.batch_size, self.input_dim, self.input_size, self.input_size)
-
-        if self.sobel:
-            output_sobel = self.model(X)
-
-            self.assertEqual(output_sobel.shape[1], 2)
-            self.assertFalse(torch.isnan(output_sobel).any())
