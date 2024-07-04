@@ -645,13 +645,8 @@ class DeepCluster(BaseEstimator):
         for i, (input, target, true_target) in tqdm(
             enumerate(train_data), desc="Training", total=len(train_data)
         ):
-            input_1 = input[0].to(self.device)
-            input_2 = input[1].to(self.device)
-            target_1 = target[0].type(torch.LongTensor).to(self.device)
-            target_2 = target[1].type(torch.LongTensor).to(self.device)
-
-            true_target_1 = true_target[0].type(torch.LongTensor).to(self.device)
-            true_target_2 = true_target[1].type(torch.LongTensor).to(self.device)
+            input_1 = self.augmentation_fn(input).to(self.device)
+            input_2 = self.augmentation_fn(input).to(self.device)
 
             if self.requires_grad:
                 input_1.requires_grad = True
@@ -664,17 +659,17 @@ class DeepCluster(BaseEstimator):
             deep_clusster_loss_1 = self.loss_criterion(output_1, target)
             deep_clusster_loss_2 = self.loss_criterion(output_2, target)
 
-            accuracy_metric.update(output_1, target_1)
-            accuracy_metric.update(output_2, target_2)
+            accuracy_metric.update(output_1, target)
+            accuracy_metric.update(output_2, target)
             # check Nan Loss
             if torch.isnan(deep_clusster_loss_1):
-                print("targets", target_1)
+                print("targets", target)
                 print("Output", output_1)
                 print("Input", input_1)
                 print("Nan Loss", deep_clusster_loss_1)
 
             if torch.isnan(deep_clusster_loss_2):
-                print("targets", target_2)
+                print("targets", target)
                 print("Output", output_2)
                 print("Input", input_2)
                 print("Nan Loss", deep_clusster_loss_2)
@@ -686,19 +681,15 @@ class DeepCluster(BaseEstimator):
             deep_clusster_losses[2 * i] = deep_clusster_loss_1.item()
             deep_clusster_losses[2 * i + 1] = deep_clusster_loss_2.item()
 
-            for tar in target_1:
+            for tar in target:
                 predicted_labels.append(tar.item())
 
-            for tar in target_2:
-                predicted_labels.append(tar.item())
-
-            for true in true_target_1:
+            for true in true_target:
                 true_labels.append(true.item())
 
-            for true in true_target_2:
-                true_labels.append(true.item())
-
-            contrastive_loss = self.nt_xent_loss(input_1, input_2)
+            contrastive_loss = self.nt_xent_loss(
+                input_1, input_2
+            )  # here we can also try with labels
 
             # add the contrastive loss to the contrastive losses tensor
             contrastive_losses[i] = contrastive_loss.item()
@@ -724,10 +715,6 @@ class DeepCluster(BaseEstimator):
                 output_2,
                 input_1,
                 input_2,
-                target_1,
-                target_2,
-                true_target_1,
-                true_target_2,
             )
             torch.cuda.empty_cache()
 
