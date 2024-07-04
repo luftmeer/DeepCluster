@@ -382,13 +382,22 @@ class DeepCluster(BaseEstimator):
             self.model.top_layer.bias.data.zero_()
             self.model.top_layer.to(self.device)
 
-            (
-                losses,
-                pred_accuracy,
-                true_accuracy,
-                deep_cluster_losses,
-                contrastive_losses,
-            ) = self.train(train_data)
+            if self.contrastive_strategy_2:
+                (
+                    losses,
+                    pred_accuracy,
+                    true_accuracy,
+                    deep_cluster_losses,
+                    contrastive_losses,
+                ) = self.train_positive_pairs(train_data)
+            else:
+                (
+                    losses,
+                    pred_accuracy,
+                    true_accuracy,
+                    deep_cluster_losses,
+                    contrastive_losses,
+                ) = self.train(train_data)
 
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
