@@ -327,9 +327,10 @@ class DeepCluster(BaseEstimator):
 
             # Remove head
             self.model.top_layer = None
-            self.model.classifier = nn.Sequential(
-                *list(self.model.classifier.children())[:-1]
-            )
+            if 'ResNet' not in str(self.model):
+                self.model.classifier = nn.Sequential(
+                    *list(self.model.classifier.children())[:-1]
+                )
 
             # Compute Features
             features = self.compute_features(data)
@@ -636,6 +637,8 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
+        if 'ResNet' in str(self.model):
+            self.model.compute_features = True
         if self.metrics:
             end = time.time()
         for i, (input, _) in tqdm(
@@ -668,6 +671,9 @@ class DeepCluster(BaseEstimator):
                 self.features_time.update(time.time() - end)
                 end = time.time()
 
+        if 'ResNet' in str(self.model):
+            self.model.compute_features = False
+        
         return features
 
     def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
