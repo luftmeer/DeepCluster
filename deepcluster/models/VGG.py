@@ -81,7 +81,7 @@ class VGG16(nn.Module):
             # 14th Layer
             nn.Dropout(0.5),
             # Linear layer dependent on input_size
-            nn.Linear(512 * (input_size // 32) * (input_size // 32), 4096),
+            nn.Linear(512 * 7 * 7, 4096),
             # nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(inplace=True),
             # 15th Layer

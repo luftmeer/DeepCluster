@@ -131,7 +131,7 @@ def main(args):
     # Dataset loading
     print(f"Loading dataset {args.dataset}")
     train_loader = datasets.dataset_loader(
-        dataset_name=args.dataset, data_dir=args.data_dir, batch_size=args.batch_size
+        dataset_name=args.dataset, data_dir=args.data_dir, batch_size=args.batch_size, train=args.ds_train, split=args.ds_split
     )
     print(f"Loaded dataset...")
 
