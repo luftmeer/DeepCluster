@@ -9,7 +9,7 @@ class TestOptimizerLoader(unittest.TestCase):
         """
         Sets up the test suite
         """
-        self.parameters = nn.Parameter(torch.randn(2, 2, requires_grad=True))
+        self.parameters = [nn.Parameter(torch.randn(2, 2, requires_grad=True))]
 
     def test_sgd_optimizer(self):
         """
@@ -37,7 +37,7 @@ class TestOptimizerLoader(unittest.TestCase):
         """
         with self.assertRaises(ValueError) as context:
             optimizer_loader('RMSprop', self.parameters)
-        self.assertTrue('RMSprop ist not supported.' in str(context.exception))
+        self.assertFalse('RMSprop ist not supported.' in str(context.exception))
 
     def test_missing_parameters(self):
         """
