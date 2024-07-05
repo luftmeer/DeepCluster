@@ -113,7 +113,7 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int, train: boo
     tf = transforms.Compose(tf)
     print('Loading dataset...')
     if dataset_name == 'tinyimagenet':
-        split ="train" # choose from "train", "val", "test"
+        split=split # choose from "train", "val", "test"
         dataset_path=f"{data_dir}/tinyimagenet/"
         dataset = TinyImageNet(
             Path(dataset_path), 
