@@ -26,7 +26,7 @@ class TestBenchmarking(unittest.TestCase):
         self.meter.update(15, 3)
 
         self.assertEqual(self.meter.val, 15)
-        self.assertEqual(self.meter.avg, 11.25)
+        self.assertEqual(self.meter.avg, 12.5)
         self.assertEqual(self.meter.sum, 50)
         self.assertEqual(self.meter.count, 4)
 
