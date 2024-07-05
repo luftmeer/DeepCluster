@@ -33,6 +33,13 @@ The true target is necessary in both cases, since we also want to calculate the 
 
 --- 
 
+## Metrics
+For results on datasets, see:
+- [MNIST](/MNIST_results.md)
+- [CIFAR10](/CIFAR10_results.md)
+
+---
+
 ## Usage
 
 The Model can simply be run by using the [main.py](/main.py) file in this root directoy. See the following help overview on how to use each individual input flat.
