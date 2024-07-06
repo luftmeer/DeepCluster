@@ -94,6 +94,7 @@ pytest==8.2.0
 pytest-cov==5.0.0
 python-dateutil==2.9.0.post0
 python-json-logger==2.0.7
+pytorch-metric-learning==2.5.0
 pytz==2024.1
 PyYAML==6.0.1
 pyzmq==26.0.3
