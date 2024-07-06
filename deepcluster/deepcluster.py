@@ -332,7 +332,7 @@ class DeepCluster(BaseEstimator):
             )
 
             # Compute Features
-            features = self.compute_features(data)
+            features = self.compute_features(data)  ## fixme
 
             # PCA reduce features
             features = self.pca_reduction(features)
@@ -648,7 +648,7 @@ class DeepCluster(BaseEstimator):
 
             if self.requires_grad:
                 input.requires_grad = True
-            aux = self.model(input).data.cpu().numpy()
+            aux = self.model(input).data.cpu().numpy()  ## fixme
 
             if i == 0:
                 features = np.zeros((len(data.dataset), aux.shape[1]), dtype=np.float32)
@@ -773,9 +773,7 @@ class DeepCluster(BaseEstimator):
 
         return labels
 
-    def create_pseudo_labeled_dataset(
-        self, dataset: data.Dataset, labels: list, transform: transforms
-    ) -> data.Dataset:
+    def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
 
         Parameters

@@ -12,7 +12,7 @@ from deepcluster.deepcluster import DeepCluster
 # CNN Models
 from deepcluster.models.AlexNet import AlexNet
 from deepcluster.models.VGG import VGG16
-#from deepcluster.models.ResNet import resnet18, resnet50
+from deepcluster.models.ResNet import resnet18, resnet34, resnet50
 
 # Utils
 from deepcluster.utils import datasets, loss_functions, optimizer
@@ -27,7 +27,8 @@ def parse_args():
 
     # CNN Model Arguments
     parser.add_argument(
-        "--arch", type=str, choices=["AlexNet", "VGG16"], default="AlexNet", help="CNN architecture (default: AlexNet)"
+        "--arch", type=str, choices=["AlexNet", "VGG16", "ResNet18", "ResNet34", "ResNet50"],
+        default="ResNet18", help="CNN architecture (default: AlexNet)"
     )
     parser.add_argument("--input_dim", type=int, default=1, help=textwrap.dedent('''\
         Input Dimension for the CNN architecture (default: 1)
@@ -38,24 +39,20 @@ def parse_args():
     parser.add_argument("--num_classes", type=int, default=10,
                         help="The amount of classes are to be discovered and clustered by the CNN and k-Means algorithm. (default: 10)"
     )
-    parser.add_argument("--sobel", action="store_true",
-                        help=textwrap.dedent('''\
+    parser.add_argument("--sobel", action="store_true", help=textwrap.dedent('''\
                             Activates the Sobel filter for images. (default: False)
                             Note: Requires b/w image inputs, which can be obtained by also using the \'--grayscale\' flag.
                             ''')
     )
     parser.add_argument("--grayscale", action="store_true",
                         help="Reduces colored images to b/w images. (default: False)"
-                        
     )
     parser.add_argument("--requires_grad", action="store_false",
-                        help="Activates the requires_grad option for the input images in the training loop. Mainly used for analytical purposes (default: True)"
-    )
+                        help="Activates the requires_grad option for the input images in the training loop. Mainly used for analytical purposes (default: True)")
 
     # DeepCluster Model
     parser.add_argument("--epochs", type=int, default=100,
-                        help="Sets the training epochs for the model. (default: 100)"
-                        )
+                        help="Sets the training epochs for the model. (default: 100)")
 
     # Dataset
     parser.add_argument(
@@ -204,6 +201,24 @@ def main(args):
             input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet18":
+        model = resnet18(
+            img_channels=args.input_dim,
+            num_classes=args.num_classes,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet34":
+        model = resnet34(
+            img_channels=args.input_dim,
+            num_classes=args.num_classes,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet50":
+        model = resnet50(
+            img_channels=args.input_dim,
+            num_classes=args.num_classes,
             sobel=args.sobel,
         )
     print("Model Loaded...")
