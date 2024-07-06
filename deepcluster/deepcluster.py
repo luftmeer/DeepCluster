@@ -10,6 +10,8 @@ import torch
 import torch.utils
 import torch.utils.data
 from clustpy.metrics import unsupervised_clustering_accuracy
+from PIL import Image
+from pytorch_metric_learning.losses import NTXentLoss, SelfSupervisedLoss
 from sklearn.base import BaseEstimator
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -24,7 +26,7 @@ from tqdm import tqdm
 
 from .utils import faiss_kmeans
 from .utils.benchmarking import Meter
-from .utils.loss_functions import ContrastiveLoss, NT_XentLoss
+from .utils.loss_functions import ContrastiveLoss
 from .utils.pseudo_labeled_dataset import (  # Keep this dataset for scikit-learn clustering
     PseudoLabeledData,
 )
@@ -85,6 +87,7 @@ class DeepCluster(BaseEstimator):
         optim_tl_beta1: float = 0.9,
         optim_tl_beta2: float = 0.999,
         seed: int = None,
+        sobel: bool = False,
         contrastive_strategy_1: bool = False,
         contrastive_strategy_2: bool = False,
     ):
@@ -178,13 +181,14 @@ class DeepCluster(BaseEstimator):
         self.metrics = metrics
         self.metrics_metadata = metrics_metadata
         self.pca_whitening = pca_whitening
+        self.sobel = sobel
 
         # Contrastive Loss using pseudo labels
         self.contrastive_criterion = ContrastiveLoss()
 
         # contrastive loss per positive pair in the batch
         # was used in SimCLR and MoCo
-        self.nt_xent_loss = NT_XentLoss(batch_size=batch_size, temperature=0.5)
+        self.nt_xent_loss = SelfSupervisedLoss(NTXentLoss(temperature=0.5))
 
         self.augmentation_fn = transforms.Compose(
             [
@@ -654,16 +658,39 @@ class DeepCluster(BaseEstimator):
         for i, (input, target, true_target) in tqdm(
             enumerate(train_data), desc="Training", total=len(train_data)
         ):
-            input_1 = self.augmentation_fn(input).to(self.device)
-            input_2 = self.augmentation_fn(input).to(self.device)
+            # transform to PIL image and apply augmentation
+            to_pil = transforms.ToPILImage()
+
+            input_1 = torch.stack([self.augmentation_fn(to_pil(img)) for img in input])
+            input_2 = torch.stack([self.augmentation_fn(to_pil(img)) for img in input])
 
             if self.requires_grad:
                 input_1.requires_grad = True
                 input_2.requires_grad = True
 
+            target = target.type(torch.LongTensor)
+            input_1, input_2, target = (
+                input_1.to(self.device),
+                input_2.to(self.device),
+                target.to(self.device),
+            )
+
             # Forward pass
-            output_1 = self.model(input_1)
-            output_2 = self.model(input_2)
+            if self.sobel:
+                input_1 = self.sobel(input_1)
+                input_2 = self.sobel(input_2)
+
+            features_1 = self.model.features(input_1)
+            features_2 = self.model.features(input_2)
+
+            features_1 = torch.flatten(features_1, 1)
+            features_2 = torch.flatten(features_2, 1)
+
+            features_1 = self.model.classifier(features_1)
+            features_2 = self.model.classifier(features_2)
+
+            output_1 = self.model.top_layer(features_1)
+            output_2 = self.model.top_layer(features_2)
 
             deep_clusster_loss_1 = self.loss_criterion(output_1, target)
             deep_clusster_loss_2 = self.loss_criterion(output_2, target)
@@ -691,13 +718,13 @@ class DeepCluster(BaseEstimator):
             deep_clusster_losses[2 * i + 1] = deep_clusster_loss_2.item()
 
             for tar in target:
-                predicted_labels.append(tar.item())
+                predicted_labels.append(tar.cpu().item())
 
             for true in true_target:
                 true_labels.append(true.item())
 
             contrastive_loss = self.nt_xent_loss(
-                input_1, input_2
+                features_1, features_2
             )  # here we can also try with labels
 
             # add the contrastive loss to the contrastive losses tensor
