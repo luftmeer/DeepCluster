@@ -18,7 +18,7 @@ AVAILABLE_DATASETS = [
     'Imagenette_160',
     ]
 BASE_TRANSFORM = [
-    transforms.Resize(256), # Resize to the necessary size
+    transforms.Resize(256),  # Resize to the necessary size
     transforms.CenterCrop(224),
     transforms.ToTensor()
 ]
