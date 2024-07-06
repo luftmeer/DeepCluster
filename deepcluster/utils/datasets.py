@@ -98,7 +98,6 @@ def dataset_loader(
     batch_size: int,
     train: bool = True,
     split: str = "train",
-    pair_augmentation=False,
 ) -> data.DataLoader:
     """Helper Function to simplify loading the training datasets.
 
@@ -133,16 +132,6 @@ def dataset_loader(
     tf.append(NORMALIZATION[dataset_name])
     tf = transforms.Compose(tf)
     print("Loading dataset...")
-
-    if pair_augmentation:
-        tf = PairAugmentationTransform(
-            transforms.Compose(
-                [*PAIR_AUGMENTATION_TRANSFORM, NORMALIZATION[dataset_name]]
-            ),
-            transforms.Compose(
-                [*PAIR_AUGMENTATION_TRANSFORM, NORMALIZATION[dataset_name]]
-            ),
-        )
 
     if dataset_name == "tinyimagenet":
         split = "train"  # choose from "train", "val", "test"
