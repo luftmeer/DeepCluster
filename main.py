@@ -19,7 +19,6 @@ from deepcluster.utils import datasets, loss_functions, optimizer
 # from deepcluster.models.ResNet import resnet18, resnet50
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="python3 main.py",
@@ -449,6 +448,7 @@ def main(args):
         metrics_file=args.metrics_file,
         metrics_metadata=str(args),
         seed=args.seed,
+        sobel=args.sobel,
         contrastive_strategy_1=args.contrastive_strategy_1,
         contrastive_strategy_2=args.contrastive_strategy_2,
     )
@@ -472,3 +472,5 @@ if __name__ == "__main__":
     main(args)
 
 # python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./metrics_file.csv" --verbose
+
+# python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./contrastive_strategy_2_metrics_file.csv" --verbose --contrastive_strategy_2
