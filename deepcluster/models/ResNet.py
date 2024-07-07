@@ -86,7 +86,7 @@ class ResNet(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
 
-            ## Residual Features
+            ## Features with Skip Connections
             self._make_layer(block, 64, n_blocks[0], 1),
             self._make_layer(block, 128, n_blocks[1], 2),
             self._make_layer(block, 256, n_blocks[2], 2),
@@ -131,13 +131,11 @@ class ResNet(nn.Module):
                 nn.BatchNorm2d(out_channels * block.expansion)
             )
 
-        layer = block(self.in_channels, out_channels, stride, downsample)
-        layers.append(layer)
-        self.in_channels *= block.expansion
+        layers.append(block(self.in_channels, out_channels, stride, downsample))
+        self.in_channels = out_channels * block.expansion
 
         for _ in range(1, n_blocks):
-            layer = block(self.in_channels, out_channels)
-            layers.append(layer)
+            layers.append(block(self.in_channels, out_channels))
 
         return nn.Sequential(*layers)
 
