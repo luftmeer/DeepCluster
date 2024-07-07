@@ -28,8 +28,11 @@ def parse_args():
 
     # CNN Model Arguments
     parser.add_argument(
-        "--arch", type=str, choices=["AlexNet", "VGG16", "ResNet18", "ResNet34", "ResNet50"],
-        default="ResNet18", help="CNN architecture (default: AlexNet)"
+        "--arch",
+        type=str,
+        choices=["FeedForward", "AlexNet", "VGG16", "ResNet18", "ResNet34", "ResNet50", "ResNet101", "ResNet152"],
+        default="AlexNet",
+        help="CNN architecture (default: AlexNet)"
     )
     parser.add_argument("--input_dim", type=int, default=1, help=textwrap.dedent('''\
         Input Dimension for the CNN architecture (default: 1)
@@ -184,13 +187,22 @@ def main(args):
     # Dataset loading
     print(f"Loading dataset {args.dataset}")
     train_loader = datasets.dataset_loader(
-        dataset_name=args.dataset, data_dir=args.data_dir, batch_size=args.batch_size, train=args.ds_train, split=args.ds_split
+        dataset_name=args.dataset,
+        data_dir=args.data_dir,
+        batch_size=args.batch_size,
+        train=args.ds_train,
+        split=args.ds_split
     )
     print(f"Loaded dataset...")
 
     # Model Loading
     print("Loading Model...")
-    if args.arch == "AlexNet":
+    if args.arch == "FeedForward":
+        model = FeedForward(
+            input_dim=(args.input_dim, 224, 224),
+            num_classes=args.num_classes
+        )
+    elif args.arch == "AlexNet":
         model = AlexNet(
             input_dim=args.input_dim,
             num_classes=args.num_classes,

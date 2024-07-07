@@ -22,7 +22,7 @@ class FeedForward(nn.Module):
         self.top_layer = nn.Linear(64, num_classes)
 
     def forward(self, x: Tensor):
-        out = torch.flatten(x)
+        out = x.view(x.size(0), -1)
         out = self.features(out)
         out = self.classifier(out)
 
