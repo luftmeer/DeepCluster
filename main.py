@@ -10,9 +10,10 @@ from torchvision import transforms
 from deepcluster.deepcluster import DeepCluster
 
 # CNN Models
+from deepcluster.models.FeedForward import FeedForward
 from deepcluster.models.AlexNet import AlexNet
 from deepcluster.models.VGG import VGG16
-from deepcluster.models.ResNet import resnet18, resnet34, resnet50
+from deepcluster.models.ResNet import resnet18, resnet34, resnet50, resnet101, resnet152
 
 # Utils
 from deepcluster.utils import datasets, loss_functions, optimizer
@@ -219,6 +220,20 @@ def main(args):
         )
     elif args.arch == "ResNet50":
         model = resnet50(
+            img_channels=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet101":
+        model = resnet101(
+            img_channels=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet152":
+        model = resnet152(
             img_channels=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,

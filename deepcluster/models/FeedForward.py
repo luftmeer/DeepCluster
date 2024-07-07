@@ -1,36 +1,33 @@
-from torch import nn
 import torch
+import torch.nn as nn
+from torch import Tensor
+
 
 class FeedForward(nn.Module):
-    def __init__(self, input_dim, num_classes):
+    def __init__(self, input_dim: tuple, num_classes: int):
         super(FeedForward, self).__init__()
+        C, H, W = input_dim
         self.features = nn.Sequential(
-            nn.Linear(input_dim, 500),
-            nn.ReLU(inplace=True),
-            nn.Linear(500, 500),
-            nn.ReLU(inplace=True),
-            nn.Linear(500, 200),
-            nn.ReLU(inplace=True)
+            nn.Linear(C * H * W, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU()
         )
+        self.classifier = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU()
+        )
+        self.top_layer = nn.Linear(64, num_classes)
 
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(500, 200),
-        #     nn.ReLU(inplace=True)
-        # )
+    def forward(self, x: Tensor):
+        out = torch.flatten(x)
+        out = self.features(out)
+        out = self.classifier(out)
 
-        self.classifier = nn.Sequential()
+        if self.top_layer:
+            out = self.top_layer(out)
 
-        self.top_layer = nn.Linear(200, num_classes)
+        return out
 
-    def forward(self, x):
-        x = self.features(x)
-        x = torch.flatten(x, 1)
-        x = self.top_layer(x)
-
-        return x
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-    def __repr__(self) -> str:
-        return 'FeedForward'
