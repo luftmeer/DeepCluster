@@ -636,29 +636,28 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
+        if 'ResNet' in str(self.model):
+            self.model.compute_features = True
         if self.metrics:
             end = time.time()
-        for i, (input, _) in tqdm(
-            enumerate(data),
-            desc="Computing Features",
-            total=len(data),
-        ):
+        for i, (input, _) in tqdm(enumerate(data), desc="Computing Features", total=len(data),):
 
             input = input.to(self.device)
 
             if self.requires_grad:
                 input.requires_grad = True
-            aux = self.model(input).data.cpu().numpy()  ## fixme
+
+            aux = self.model(input).data.cpu().numpy()
 
             if i == 0:
                 features = np.zeros((len(data.dataset), aux.shape[1]), dtype=np.float32)
 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
-                features[i * self.batch_size : (i + 1) * self.batch_size] = aux
+                features[i * self.batch_size: (i + 1) * self.batch_size] = aux
             else:
                 # Rest of the data
-                features[i * self.batch_size :] = aux
+                features[i * self.batch_size:] = aux
 
             # Free up GPU memory
             del input, aux
@@ -668,7 +667,11 @@ class DeepCluster(BaseEstimator):
                 self.features_time.update(time.time() - end)
                 end = time.time()
 
+        if 'ResNet' in str(self.model):
+            self.model.compute_features = False
+
         return features
+
 
     def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
         """Computing the features based on the model prediction.

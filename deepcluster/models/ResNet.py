@@ -75,10 +75,14 @@ class ResNet(nn.Module):
                  img_channels: int = 3,
                  num_classes: int = 1000,
                  grayscale=False,
-                 sobel=False):
+                 sobel=False,
+                 name: str = "ResNet"):
 
         super(ResNet, self).__init__()
+        self.name = name
+        self.compute_features = False
         self.in_channels: int = 64
+
         self.features = nn.Sequential(
             ## First Features
             nn.Conv2d(img_channels, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False),
@@ -93,8 +97,9 @@ class ResNet(nn.Module):
             self._make_layer(block, 512, n_blocks[3], 2)
         )
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.classifier = nn.Linear(in_features=512, out_features=num_classes)
-        self.top_layer = self.classifier
+        self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
+
+        self.classifier = self.top_layer
 
         # Define grayscale Filter
         self.grayscale = None
@@ -147,8 +152,10 @@ class ResNet(nn.Module):
             x = self.sobel(x)
 
         out = self.features(x)
-        out = self.avgpool(out)
+        if self.compute_features:   ## Exit early with flattened feature maps
+            return out.view(out.size(0), -1)
 
+        out = self.avgpool(out)
         out = out.view(out.size(0), -1)
         out = self.top_layer(out)
 
