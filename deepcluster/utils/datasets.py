@@ -78,6 +78,7 @@ NORMALIZATION = {
     ),
 }
 
+
 def dataset_loader(dataset_name: str, data_dir: str, batch_size: int, train: bool=True, split: str='train') -> data.DataLoader:
     """Helper Function to simplify loading the training datasets.
 
@@ -94,11 +95,11 @@ def dataset_loader(dataset_name: str, data_dir: str, batch_size: int, train: boo
         - GTSRB
         - Imagenette full, 320, 160
         
-        data_dir: str,
-            The base folder where the dataset is stored physically.
+    data_dir: str,
+        The base folder where the dataset is stored physically.
         
-        batch_size: int,
-            How many images per iterations are trained.
+    batch_size: int,
+        How many images per iterations are trained.
 
     Returns
     -------
