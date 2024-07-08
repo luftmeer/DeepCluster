@@ -42,6 +42,10 @@ We have implemented two strategies for this:
 For the first strategy we feed the input image into the DeepCluster model in order to get features and pseudo labels.
 These resulting features and labels we feed into a contrastive head, that computes the Contrastive Loss, which we will add to the DeepCluster Loss obtained from the DeepCluster model.
 
+Here you can see a figure of the strategy:
+
+<img src="https://github.com/luftmeer/DeepCluster/assets/76487137/6fd406fb-59aa-45a3-8356-18565660d687" height=500 alt="Contrastive Straategy 1"/>
+
 ##### Contrastive Strategy 2
 
 ---
