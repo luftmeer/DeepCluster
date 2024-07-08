@@ -17,6 +17,7 @@ class VGG16(nn.Module):
                 When set to True, the sobel filters are added and adjust the dataset to grayscale and enhance the edge visibility.
         """
         super(VGG16, self).__init__()
+        self.compute_features = False
         self.features = nn.Sequential(
             # First Layer
             nn.Conv2d(input_dim, 64, kernel_size=3, stride=1, padding=1),
@@ -87,11 +88,13 @@ class VGG16(nn.Module):
             # 15th Layer
             nn.Dropout(0.5),
             nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
         )
         
         # 16th Layer
-        self.top_layer = nn.Linear(4096, num_classes)
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
         
         # Initialize weights
         self._initialize_weights()
@@ -127,7 +130,6 @@ class VGG16(nn.Module):
         Returns
         -------
             torch.Tensor
-                #TODO tbd
         """
         if self.grayscale:
             X = self.grayscale(X)
@@ -136,8 +138,12 @@ class VGG16(nn.Module):
         X = self.features(X)
         X = torch.flatten(X, 1)
         X = self.classifier(X)
-        if self.top_layer:
-            X = self.top_layer(X)
+        
+        # If model is in compute_features mode, return features up to this state for classification process
+        if self.compute_features:
+            return X
+        
+        X = self.top_layer(X)
         return X
     
     def __str__(self) -> str:

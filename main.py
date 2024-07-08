@@ -144,35 +144,30 @@ def parse_args():
     parser.add_argument(
         "--lr",
         type=float,
-        choices=range(0, 1),
         default=0.05,
         help="Learning Rate for the main Optimizer. (default: 0.05)",
     )
     parser.add_argument(
         "--momentum",
         type=float,
-        choices=range(0, 1),
         default=0.9,
         help="Momentum for the main Optimizer and only used for SGD Optimizer. (default 0.9)",
     )
     parser.add_argument(
         "--weight_decay",
         type=float,
-        choices=range(0, 1),
         default=10**-5,
         help="Weight Decay for the main Optimizer. (defualt: 10^-5)",
     )
     parser.add_argument(
         "--beta1",
         type=float,
-        choices=range(0, 1),
         default=0.9,
         help="Beta1 value for the main Optimizer and only used for the Adam optimizer. (default: 0.9)",
     )  # For Adam
     parser.add_argument(
         "--beta2",
         type=float,
-        choices=range(0, 1),
         default=0.999,
         help="Beta2 value for the main Optimizer and only used for the Adam optimizer. (default: 0.999)",
     )  # For Adam
@@ -194,35 +189,30 @@ def parse_args():
     parser.add_argument(
         "--lr_tl",
         type=float,
-        choices=range(0, 1),
         default=0.05,
         help="Learning Rate for the top layer Optimizer. (default: 0.05)",
     )
     parser.add_argument(
         "--momentum_tl",
         type=float,
-        choices=range(0, 1),
         default=0.9,
         help="Momentum for the top layer Optimizer and only used for SGD Optimizer. (default 0.9)",
     )
     parser.add_argument(
         "--weight_decay_tl",
         type=float,
-        choices=range(0, 1),
         default=10**-5,
         help="Weight Decay for the top layer Optimizer. (defualt: 10^-5)",
     )
     parser.add_argument(
         "--beta1_tl",
         type=float,
-        choices=range(0, 1),
         default=0.9,
         help="Beta1 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.9)",
     )  # For Adam
     parser.add_argument(
         "--beta2_tl",
         type=float,
-        choices=range(0, 1),
         default=0.999,
         help="Beta2 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.999)",
     )  # For Adam
@@ -326,6 +316,12 @@ def parse_args():
     # Contrastive Strategies
     parser.add_argument("--contrastive_strategy_1", action="store_true")
     parser.add_argument("--contrastive_strategy_2", action="store_true")
+
+    parser.add_argument(
+        "--remove_head", 
+        action="store_true",
+        help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation."
+    )
 
     return parser.parse_args()
 
@@ -451,6 +447,7 @@ def main(args):
         sobel=args.sobel,
         contrastive_strategy_1=args.contrastive_strategy_1,
         contrastive_strategy_2=args.contrastive_strategy_2,
+        remove_head=args.remove_head,
     )
 
     print("Running model...")

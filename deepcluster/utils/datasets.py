@@ -131,12 +131,10 @@ def dataset_loader(
     tf = BASE_TRANSFORM
     tf.append(NORMALIZATION[dataset_name])
     tf = transforms.Compose(tf)
-    print("Loading dataset...")
-
-    if dataset_name == "tinyimagenet":
-        split = "train"  # choose from "train", "val", "test"
-        dataset_path = f"{data_dir}/tinyimagenet/"
-
+    print('Loading dataset...')
+    if dataset_name == 'tinyimagenet':
+        split=split # choose from "train", "val", "test"
+        dataset_path=f"{data_dir}/tinyimagenet/"
         dataset = TinyImageNet(
             Path(dataset_path), split=split, transform=tf, imagenet_idx=True
         )

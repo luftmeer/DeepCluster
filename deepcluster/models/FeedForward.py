@@ -4,30 +4,34 @@ import torch
 class FeedForward(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(FeedForward, self).__init__()
+        self.compute_features = False
         self.features = nn.Sequential(
             nn.Linear(input_dim, 500),
             nn.ReLU(inplace=True),
             nn.Linear(500, 500),
             nn.ReLU(inplace=True),
             nn.Linear(500, 200),
-            nn.ReLU(inplace=True)
         )
 
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(500, 200),
-        #     nn.ReLU(inplace=True)
-        # )
 
         self.classifier = nn.Sequential()
 
-        self.top_layer = nn.Linear(200, num_classes)
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(200, num_classes)
+        )
 
-    def forward(self, x):
-        x = self.features(x)
-        x = torch.flatten(x, 1)
-        x = self.top_layer(x)
+    def forward(self, X):
+        X = self.features(X)
+        X = torch.flatten(X, 1)
+        
+        # If model is in compute_features mode, return features up to this state for classification process
+        if self.compute_features:
+            return X
+        
+        X = self.top_layer(X)
 
-        return x
+        return X
 
     def __str__(self) -> str:
         return self.__repr__()

@@ -4,11 +4,13 @@ import os
 import time
 from datetime import datetime
 
-import faiss
 import numpy as np
 import torch
-import torch.utils
-import torch.utils.data
+from torch.utils import data
+from torch import Tensor, nn, optim
+from torch.backends import cudnn
+from torcheval.metrics import MulticlassAccuracy
+from torchvision import transforms
 from clustpy.metrics import unsupervised_clustering_accuracy
 from PIL import Image
 from pytorch_metric_learning.losses import NTXentLoss, SelfSupervisedLoss
@@ -17,19 +19,12 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.preprocessing import normalize
-from torch import Tensor, nn, optim
-from torch.backends import cudnn
-from torch.utils import data
-from torcheval.metrics import MulticlassAccuracy
-from torchvision import transforms
 from tqdm import tqdm
 
 from .utils import faiss_kmeans
 from .utils.benchmarking import Meter
 from .utils.loss_functions import ContrastiveLoss
-from .utils.pseudo_labeled_dataset import (  # Keep this dataset for scikit-learn clustering
-    PseudoLabeledData,
-)
+from .utils.pseudo_labeled_dataset import PseudoLabeledData # Keep this dataset for scikit-learn clustering
 from .utils.UnifiedSampler import UnifLabelSampler
 
 # Base folder for checkpoints
@@ -90,6 +85,7 @@ class DeepCluster(BaseEstimator):
         sobel: bool = False,
         contrastive_strategy_1: bool = False,
         contrastive_strategy_2: bool = False,
+        remove_head: bool = False,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
@@ -204,6 +200,7 @@ class DeepCluster(BaseEstimator):
         # flags for different contrastive strategies
         self.contrastive_strategy_1 = contrastive_strategy_1
         self.contrastive_strategy_2 = contrastive_strategy_2
+        self.remove_head = remove_head
 
         # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
         file_prefix = []
@@ -316,7 +313,7 @@ class DeepCluster(BaseEstimator):
         return
 
     def fit(self, data: data.DataLoader):
-        self.model.features = torch.nn.DataParallel(self.model.features)
+        self.model.features = nn.DataParallel(self.model.features)
         self.model.to(self.device)
 
         # Checkpoint file path given, load checkpoint
@@ -324,7 +321,11 @@ class DeepCluster(BaseEstimator):
             self.load_checkpoint()
 
         cudnn.benchmark = True
-        fd = int(self.model.top_layer.weight.size()[1])
+        if self.remove_head:
+            # Obtain in_features from last classification layer with k-cluster output
+            fd = int(self.model.top_layer[-1].weight.size()[1])
+            if self.verbose: print(f'Removing Head: Storing out_feature value of size {fd}')
+        
         if self.metrics:
             end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
@@ -333,10 +334,15 @@ class DeepCluster(BaseEstimator):
                 print(f'{"=" * 25} Epoch {epoch + 1} {"=" * 25}')
 
             # Remove head
-            self.model.top_layer = None
-            self.model.classifier = nn.Sequential(
-                *list(self.model.classifier.children())[:-1]
-            )
+            if self.remove_head:
+                self.model.top_layer = None
+                if self.verbose: print('Removed Top Layer head.')
+            
+            # TODO: Cleanup
+            '''if 'ResNet' not in str(self.model):
+                self.model.classifier = nn.Sequential(
+                    *list(self.model.classifier.children())[:-1]
+                )'''
 
             # Compute Features
             features = self.compute_features(data)
@@ -377,14 +383,16 @@ class DeepCluster(BaseEstimator):
                 drop_last=True,  # drop last for nt_xent_loss
             )
 
-            # Add Top Layer
-            classifiers = list(self.model.classifier.children())
-            classifiers.append(nn.ReLU(inplace=True).to(self.device))
-            self.model.classifier = nn.Sequential(*classifiers)
-            self.model.top_layer = nn.Linear(fd, self.k)
-            self.model.top_layer.weight.data.normal_(0, 0.01)
-            self.model.top_layer.bias.data.zero_()
-            self.model.top_layer.to(self.device)
+            if self.remove_head:
+                # Add Top Layer back to Model
+                if self.verbose: print(f'Reattaching top layer head.')
+                self.model.top_layer = nn.Sequential(
+                    nn.ReLU(inplace=True),
+                    nn.Linear(in_features=fd, out_features=self.k)
+                )
+                self.model.top_layer[-1].weight.data.normal_(0, 0.01)
+                self.model.top_layer[-1].bias.data.zero_()
+                self.model.top_layer.to(self.device)
 
             if self.contrastive_strategy_2:
                 (
@@ -819,6 +827,10 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
+        
+        # Activate compute features mode to exit forward function in advance
+        self.model.compute_features = True
+        
         if self.metrics:
             end = time.time()
         for i, (input, _) in tqdm(
@@ -831,6 +843,7 @@ class DeepCluster(BaseEstimator):
 
             if self.requires_grad:
                 input.requires_grad = True
+                
             aux = self.model(input).data.cpu().numpy()
 
             if i == 0:
@@ -851,6 +864,9 @@ class DeepCluster(BaseEstimator):
                 self.features_time.update(time.time() - end)
                 end = time.time()
 
+        # Exit compute_feature mode
+        self.model.compute_features = False
+        
         return features
 
     def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
