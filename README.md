@@ -81,29 +81,18 @@ The Model can simply be run by using the [main.py](/main.py) file in this root d
 > **_NOTE_**: Some of the inputs are not necessary and were strictly used for testing different values or approaches. Simply executing `python3 main.py`will result in a working run, as long a Nvidia GPU is present. If no GPU is present, use `python3 main.py --clustering sklearn` since the **faiss** clustering approach strictly needs a GPU present.
 
 ```text
-usage: python3 main.py [-h] [--arch {AlexNet,VGG16}] [--input_dim INPUT_DIM]
-                       [--num_classes NUM_CLASSES] [--sobel] [--grayscale] [--requires_grad]
-                       [--epochs EPOCHS]
-                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB,Imagenette_full,Imagenette_320,Imagenette_160}]
-                       [--data_dir DATA_DIR] [--ds_train]
-                       [--ds_split {train,test,unlabeled,train+unlabeled,val}]
-                       [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR]
-                       [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1]
-                       [--beta2 BETA2] [--param_requires_grad] [--reassign_optimizer_tl]
-                       [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL]
-                       [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL]
-                       [--beta2_tl BETA2_TL] [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca]
-                       [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION]
-                       [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}]
-                       [--metrics] [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR]
-                       [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED]
-                       [--contrastive_strategy_1] [--contrastive_strategy_2] [--remove_head]
+usage: python3 main.py [-h] [--arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}] [--input_dim INPUT_DIM] [--num_classes NUM_CLASSES] [--sobel] [--grayscale] [--requires_grad] [--epochs EPOCHS]
+                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB,Imagenette_full,Imagenette_320,Imagenette_160}] [--data_dir DATA_DIR] [--ds_train]
+                       [--ds_split {train,test,unlabeled,train+unlabeled,val}] [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR] [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1] [--beta2 BETA2]
+                       [--param_requires_grad] [--reassign_optimizer_tl] [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL] [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL] [--beta2_tl BETA2_TL]
+                       [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca] [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION] [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}] [--metrics]
+                       [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR] [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED] [--contrastive_strategy_1] [--contrastive_strategy_2] [--remove_head]
 
 PyTorch Implementation of DeepCluster with added Contrastive Learning features
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --arch {AlexNet,VGG16}
+  --arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}
                         CNN architecture (default: AlexNet)
   --input_dim INPUT_DIM
                         Input Dimension for the CNN architecture (default: 1)
@@ -125,7 +114,7 @@ optional arguments:
                          - CIFAR10
                          - FashionMNIST
                          - KMNIST
-
+                        
                         When not seltected, only the test images are downloaded, extracted and/or used.
   --ds_split {train,test,unlabeled,train+unlabeled,val}
                         Selects the type of data for sepcific datasets (default: train):
@@ -180,6 +169,6 @@ optional arguments:
   --contrastive_strategy_1
                         When active, the first contrastive strategy is used. The image is feed into the DeepCluster framework. Together with the resulting pseudo labels the features are fed into a contrastive head, that calculates the contrastive loss. The sum of the DeepCluster Loss and the Contrastive Loss will be the final loss. (default: False)
   --contrastive_strategy_2
-                        When active, the second contrastive strategy is used. The input image is augmented into two different verions of the origin. Both augme nted images are feed into the DeepCluster framework. both representations are used to calculate the NTXentLoss. The final loss will be the sum of both DeepCluster losses and the NTXent Loss. (default: False)
+                        When active, the second contrastive strategy is used. The input image is augmented into two different verions of the origin. Both augmented images are feed into the DeepCluster framework. both representations are used to calculate the NTXentLoss. The final loss will be the sum of both DeepCluster losses and the NTXent Loss. (default: False)
   --remove_head         When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.
 ```
