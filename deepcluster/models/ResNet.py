@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-
+#from torchvision.models.resnet import BasicBlock, Bottleneck
 
 class BasicBlock(nn.Module):
     expansion: int = 1
@@ -72,20 +72,20 @@ class ResNet(nn.Module):
     def __init__(self,
                  block,
                  n_blocks: iter,
-                 img_channels: int = 3,
+                 input_dim: int = 3,
                  num_classes: int = 1000,
                  grayscale=False,
                  sobel=False,
                  name: str = "ResNet"):
 
         super(ResNet, self).__init__()
-        self.name = name
         self.compute_features = False
+        self.name = name
         self.in_channels: int = 64
 
         self.features = nn.Sequential(
             ## First Features
-            nn.Conv2d(img_channels, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.Conv2d(input_dim, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(self.in_channels),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
@@ -97,7 +97,8 @@ class ResNet(nn.Module):
             self._make_layer(block, 512, n_blocks[3], 2)
         )
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.top_layer = nn.Linear(in_features=512, out_features=num_classes)
+               
+        self.top_layer = nn.Linear(in_features=512*block.expansion, out_features=num_classes)
 
         self.classifier = self.top_layer
 
@@ -110,18 +111,14 @@ class ResNet(nn.Module):
             for parameter in self.grayscale.parameters():
                 parameter.require_grad = False
 
-        ## Define Sobel Filter
+        
+        # Define Sobel Filter
         self.sobel = None
         if sobel:
-            grayscale = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=1, stride=1, padding=0)
-            grayscale.weight.data.fill_(1.0 / 3.0)
-            grayscale.bias.data.zero_()
-            filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
-            filter.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
-            filter.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
-            filter.bias.data.zero_()
-
-            self.sobel = nn.Sequential(grayscale, filter)
+            self.sobel = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1)
+            self.sobel.weight.data[0, 0].copy_(torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]))
+            self.sobel.weight.data[1, 0].copy_(torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]))
+            self.sobel.bias.data.zero_()
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
 
@@ -142,7 +139,7 @@ class ResNet(nn.Module):
         for _ in range(1, n_blocks):
             layers.append(block(self.in_channels, out_channels))
 
-        return nn.Sequential(*layers)
+        return layers
 
     def forward(self, x: Tensor) -> Tensor:
 
@@ -156,23 +153,27 @@ class ResNet(nn.Module):
             return out.view(out.size(0), -1)
 
         out = self.avgpool(out)
-        out = out.view(out.size(0), -1)
+        out = torch.flatten(out, 1)
         out = self.top_layer(out)
 
         return out
+    
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+    def __repr__(self) -> str:
+        return self.name
 
-
-
-def resnet18(img_channels: int, num_classes: int, grayscale=False, sobel=False):
-    return ResNet(BasicBlock, (2, 2, 2, 2), img_channels, num_classes, grayscale, sobel)
+def resnet18(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(BasicBlock, (2, 2, 2, 2), input_dim, num_classes, grayscale, sobel, 'ResNet18')
 
 
 def resnet34(img_channels: int, num_classes: int, grayscale=False, sobel=False):
     return ResNet(BasicBlock, (3, 4, 6, 3), img_channels, num_classes, grayscale, sobel)
 
 
-def resnet50(img_channels: int, num_classes: int, grayscale=False, sobel=False):
-    return ResNet(Bottleneck, (3, 4, 6, 3), img_channels, num_classes, grayscale, sobel)
+def resnet50(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(Bottleneck, (3, 4, 6, 3), input_dim, num_classes, grayscale, sobel, 'ResNet50')
 
 
 def resnet101(img_channels: int, num_classes: int, grayscale=False, sobel=False):

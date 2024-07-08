@@ -6,6 +6,7 @@ from torch import Tensor
 class FeedForward(nn.Module):
     def __init__(self, input_dim: tuple, num_classes: int):
         super(FeedForward, self).__init__()
+        self.compute_features = False
         C, H, W = input_dim
         self.features = nn.Sequential(
             nn.Linear(C * H * W, 128),
