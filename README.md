@@ -49,10 +49,10 @@ The Model can simply be run by using the [main.py](/main.py) file in this root d
 ```text
 usage: python3 main.py [-h] [--arch {AlexNet,VGG16}] [--input_dim INPUT_DIM] [--num_classes NUM_CLASSES] [--sobel] [--grayscale] [--requires_grad] [--epochs EPOCHS]
                        [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB,Imagenette_full,Imagenette_320,Imagenette_160}] [--data_dir DATA_DIR] [--ds_train]
-                       [--ds_split {train,test,unlabeled,train+unlabeled,val}] [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr {0}] [--momentum {0}] [--weight_decay {0}] [--beta1 {0}] [--beta2 {0}] [--param_requires_grad]
-                       [--reassign_optimizer_tl] [--optimizer_tl {SGD,Adam}] [--lr_tl {0}] [--momentum_tl {0}] [--weight_decay_tl {0}] [--beta1_tl {0}] [--beta2_tl {0}] [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca]
-                       [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION] [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}] [--metrics] [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR]
-                       [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED] [--deep_cluster_and_contrastive_loss]
+                       [--ds_split {train,test,unlabeled,train+unlabeled,val}] [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR] [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1] [--beta2 BETA2]
+                       [--param_requires_grad] [--reassign_optimizer_tl] [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL] [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL] [--beta2_tl BETA2_TL]
+                       [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca] [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION] [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}] [--metrics]
+                       [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR] [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED] [--remove_head] [--deep_cluster_and_contrastive_loss]
 
 PyTorch Implementation of DeepCluster with added Contrastive Learning features
 
@@ -92,22 +92,24 @@ options:
                         Batch size for the main and training Dataset. (default: 256)
   --optimizer {SGD,Adam}
                         Main Optimizer for the complete Model. (default: SGD)
-  --lr {0}              Learning Rate for the main Optimizer. (default: 0.05)
-  --momentum {0}        Momentum for the main Optimizer and only used for SGD Optimizer. (default 0.9)
-  --weight_decay {0}    Weight Decay for the main Optimizer. (defualt: 10^-5)
-  --beta1 {0}           Beta1 value for the main Optimizer and only used for the Adam optimizer. (default: 0.9)
-  --beta2 {0}           Beta2 value for the main Optimizer and only used for the Adam optimizer. (default: 0.999)
+  --lr LR               Learning Rate for the main Optimizer. (default: 0.05)
+  --momentum MOMENTUM   Momentum for the main Optimizer and only used for SGD Optimizer. (default 0.9)
+  --weight_decay WEIGHT_DECAY
+                        Weight Decay for the main Optimizer. (defualt: 10^-5)
+  --beta1 BETA1         Beta1 value for the main Optimizer and only used for the Adam optimizer. (default: 0.9)
+  --beta2 BETA2         Beta2 value for the main Optimizer and only used for the Adam optimizer. (default: 0.999)
   --param_requires_grad
   --reassign_optimizer_tl
                         If active, the optimizer for the top layer of the CNN will always be reset/reassigned for each epoch. (default: False)
   --optimizer_tl {SGD,Adam}
                         Top layer Optimizer for the complete Model. (default: SGD)
-  --lr_tl {0}           Learning Rate for the top layer Optimizer. (default: 0.05)
-  --momentum_tl {0}     Momentum for the top layer Optimizer and only used for SGD Optimizer. (default 0.9)
-  --weight_decay_tl {0}
+  --lr_tl LR_TL         Learning Rate for the top layer Optimizer. (default: 0.05)
+  --momentum_tl MOMENTUM_TL
+                        Momentum for the top layer Optimizer and only used for SGD Optimizer. (default 0.9)
+  --weight_decay_tl WEIGHT_DECAY_TL
                         Weight Decay for the top layer Optimizer. (defualt: 10^-5)
-  --beta1_tl {0}        Beta1 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.9)
-  --beta2_tl {0}        Beta2 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.999)
+  --beta1_tl BETA1_TL   Beta1 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.9)
+  --beta2_tl BETA2_TL   Beta2 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.999)
   --loss_fn {L1,L2,MSE,CrossEntropy}
                         Loss function for when training the model. (default: CrossEntropy)
   --pca                 When set, DeepCluster will perform a PCA reduction on the computed features.
@@ -130,5 +132,6 @@ options:
                         Define a file path for a checkpoint when the intention is to resume a previous run model. (default: None)
   --verbose, -v         Print further information when running the model. (default: None)
   --seed SEED           Define a seed that is used when initializing the model. (default: None)
+  --remove_head         When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.
   --deep_cluster_and_contrastive_loss
 ```
