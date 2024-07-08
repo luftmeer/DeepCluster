@@ -314,13 +314,21 @@ def parse_args():
     )
 
     # Contrastive Strategies
-    parser.add_argument("--contrastive_strategy_1", action="store_true")
-    parser.add_argument("--contrastive_strategy_2", action="store_true")
+    parser.add_argument(
+        "--contrastive_strategy_1",
+        action="store_true",
+        help="When active, the first contrastive strategy is used. The image is feed into the DeepCluster framework. Together with the resulting pseudo labels the features are fed into a contrastive head, that calculates the contrastive loss. The sum of the DeepCluster Loss and the Contrastive Loss will be the final loss. (default: False)",
+    )
+    parser.add_argument(
+        "--contrastive_strategy_2",
+        action="store_true",
+        help="When active, the second contrastive strategy is used. The input image is augmented into two different verions of the origin. Both augme nted images are feed into the DeepCluster framework. both representations are used to calculate the NTXentLoss. The final loss will be the sum of both DeepCluster losses and the NTXent Loss. (default: False)",
+    )
 
     parser.add_argument(
-        "--remove_head", 
+        "--remove_head",
         action="store_true",
-        help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation."
+        help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.",
     )
 
     return parser.parse_args()
