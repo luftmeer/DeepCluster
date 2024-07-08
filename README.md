@@ -44,7 +44,9 @@ These resulting features and labels we feed into a contrastive head, that comput
 
 Here you can see a figure of the strategy:
 
-<img src="https://github.com/luftmeer/DeepCluster/assets/76487137/6fd406fb-59aa-45a3-8356-18565660d687" height=500 alt="Contrastive Straategy 1"/>
+<p align="center">
+  <img src="https://github.com/luftmeer/DeepCluster/assets/76487137/6fd406fb-59aa-45a3-8356-18565660d687" height=500 alt="Contrastive Straategy 1"/>
+</p>
 
 ##### Contrastive Strategy 2
 
@@ -57,7 +59,9 @@ Together with the two DeepCluster losses the sum of the losses forms the final l
 
 Here is a figure of the process:
 
-<img src="https://github.com/luftmeer/DeepCluster/assets/76487137/500fb848-1d82-43ea-99cd-2fb69c3625c5" height=500 alt="Contrastive Straategy 2"/>
+<p align="center">
+  <img src="https://github.com/luftmeer/DeepCluster/assets/76487137/500fb848-1d82-43ea-99cd-2fb69c3625c5" height=500 alt="Contrastive Straategy 2"/>
+</p>
 
 ---
 
