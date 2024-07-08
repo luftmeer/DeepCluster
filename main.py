@@ -94,18 +94,18 @@ def parse_args():
         "--optimizer", type=str, choices=optimizer.OPTIMIZERS, default="SGD",
         help="Main Optimizer for the complete Model. (default: SGD)"
     )
-    parser.add_argument("--lr", type=float, choices=range(0, 1), default=0.05, help="Learning Rate for the main Optimizer. (default: 0.05)")
-    parser.add_argument("--momentum", type=float, choices=range(0, 1), default=0.9, help="Momentum for the main Optimizer and only used for SGD Optimizer. (default 0.9)")
+    parser.add_argument("--lr", type=float, default=0.05, help="Learning Rate for the main Optimizer. (default: 0.05)")
+    parser.add_argument("--momentum", type=float, default=0.9, help="Momentum for the main Optimizer and only used for SGD Optimizer. (default 0.9)")
     parser.add_argument(
-        "--weight_decay", type=float, choices=range(0, 1), default=10**-5,
+        "--weight_decay", type=float, default=10**-5,
         help="Weight Decay for the main Optimizer. (defualt: 10^-5)"
     )
     parser.add_argument(
-        "--beta1", type=float, choices=range(0, 1), default=0.9,
+        "--beta1", type=float, default=0.9,
         help="Beta1 value for the main Optimizer and only used for the Adam optimizer. (default: 0.9)"
     )  # For Adam
     parser.add_argument(
-        "--beta2", type=float, choices=range(0, 1), default=0.999,
+        "--beta2", type=float, default=0.999,
         help="Beta2 value for the main Optimizer and only used for the Adam optimizer. (default: 0.999)"
     )  # For Adam
     parser.add_argument("--param_requires_grad", action="store_true")
@@ -116,18 +116,18 @@ def parse_args():
         "--optimizer_tl", type=str, choices=optimizer.OPTIMIZERS, default="SGD",
         help="Top layer Optimizer for the complete Model. (default: SGD)"
     )
-    parser.add_argument("--lr_tl", type=float, choices=range(0, 1), default=0.05, help="Learning Rate for the top layer Optimizer. (default: 0.05)")
-    parser.add_argument("--momentum_tl", type=float, choices=range(0, 1), default=0.9, help="Momentum for the top layer Optimizer and only used for SGD Optimizer. (default 0.9)")
+    parser.add_argument("--lr_tl", type=float, default=0.05, help="Learning Rate for the top layer Optimizer. (default: 0.05)")
+    parser.add_argument("--momentum_tl", type=float, default=0.9, help="Momentum for the top layer Optimizer and only used for SGD Optimizer. (default 0.9)")
     parser.add_argument(
-        "--weight_decay_tl", type=float, choices=range(0, 1), default=10**-5,
+        "--weight_decay_tl", type=float, default=10**-5,
         help="Weight Decay for the top layer Optimizer. (defualt: 10^-5)"
     )
     parser.add_argument(
-        "--beta1_tl", type=float, choices=range(0, 1), default=0.9,
+        "--beta1_tl", type=float, default=0.9,
         help="Beta1 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.9)"
     )  # For Adam
     parser.add_argument(
-        "--beta2_tl", type=float, choices=range(0, 1), default=0.999,
+        "--beta2_tl", type=float, default=0.999,
         help="Beta2 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.999)"
     )  # For Adam
 
