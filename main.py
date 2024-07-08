@@ -351,7 +351,9 @@ def main(args):
     if args.arch == "FeedForward":
         model = FeedForward(
             input_dim=(args.input_dim, 224, 224),
-            num_classes=args.num_classes
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
         )
     elif args.arch == "AlexNet":
         model = AlexNet(
