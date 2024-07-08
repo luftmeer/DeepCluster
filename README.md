@@ -48,6 +48,13 @@ Here you can see a figure of the strategy:
 
 ##### Contrastive Strategy 2
 
+The first strategy relies on the computed pseudo labels, which is not optimal, since they can be wrong.
+Therefore we utilize image augmentation to create two different images from one single image. Since both come from the same origin, we know, that both representations should be in the same cluster, i.e. closer together.
+
+We feed both images separately into the DeepCluster framework and extract the resulting representations of the augmented images.
+These representations we then feed into our contrastive head, that calculates the NTXent Loss and returns it.
+Together with the two DeepCluster losses the sum of the losses forms the final loss.
+
 ---
 
 ## Metrics
