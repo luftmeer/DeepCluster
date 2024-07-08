@@ -55,6 +55,8 @@ We feed both images separately into the DeepCluster framework and extract the re
 These representations we then feed into our contrastive head, that calculates the NTXent Loss and returns it.
 Together with the two DeepCluster losses the sum of the losses forms the final loss.
 
+<img src="https://github.com/luftmeer/DeepCluster/assets/76487137/500fb848-1d82-43ea-99cd-2fb69c3625c5" height=500 alt="Contrastive Straategy 2"/>
+
 ---
 
 ## Metrics
