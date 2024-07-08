@@ -159,7 +159,6 @@ class DeepCluster(BaseEstimator):
         self.batch_size = batch_size
         self.k = k
         self.verbose = verbose
-        self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.reassign_clustering = reassign_clustering
@@ -348,7 +347,8 @@ class DeepCluster(BaseEstimator):
             features = self.compute_features(data)
 
             # PCA reduce features
-            features = self.pca_reduction(features)
+            if self.pca:
+                features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
             labels = self.apply_clustering(features)
