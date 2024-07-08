@@ -161,11 +161,12 @@ class ResNet(nn.Module):
             x = self.sobel(x)
 
         out = self.features(x)
-        if self.compute_features:   ## Exit early with flattened feature maps
-            return out.view(out.size(0), -1)
-
         out = self.avgpool(out)
         out = torch.flatten(out, 1)
+        
+        if self.compute_features:   ## Exit early with flattened feature maps
+            return out
+
         out = self.top_layer(out)
 
         return out
