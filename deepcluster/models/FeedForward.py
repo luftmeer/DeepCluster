@@ -36,4 +36,10 @@ class FeedForward(nn.Module):
             out = self.top_layer(out)
 
         return out
+    
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+    def __repr__(self) -> str:
+        return 'FeedForward'
 
