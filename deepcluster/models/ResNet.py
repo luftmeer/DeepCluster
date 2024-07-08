@@ -6,7 +6,7 @@ from torch import Tensor
 class BasicBlock(nn.Module):
     expansion: int = 1
 
-    def __init__(self, in_channel, out_channel, stride=1, downsample=None):
+    def __init__(self, in_channel, out_channel, stride=1, downsample=None, last_relu=True):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channel, out_channel, kernel_size=3, stride=stride, padding=1),
@@ -17,7 +17,9 @@ class BasicBlock(nn.Module):
             nn.Conv2d(out_channel, out_channel, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(out_channel)
         )
-        self.relu = nn.ReLU()
+        self.relu = None
+        if last_relu:
+            self.relu = nn.ReLU()
         self.downsample = downsample
 
     def forward(self, x: Tensor) -> Tensor:
@@ -29,13 +31,16 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out += identity
 
-        return self.relu(out)
+        if self.relu:
+            return self.relu(out)
+        
+        return out
 
 
 class Bottleneck(nn.Module):
     expansion: int = 4
 
-    def __init__(self, in_channel, out_channel, stride=1, downsample=None):
+    def __init__(self, in_channel, out_channel, stride=1, downsample=None, last_relu=True):
         super(Bottleneck, self).__init__()
 
         self.conv1 = nn.Sequential(
@@ -52,7 +57,9 @@ class Bottleneck(nn.Module):
             nn.Conv2d(out_channel, out_channel * self.expansion, 1, bias=False),
             nn.BatchNorm2d(out_channel * self.expansion)
         )
-        self.relu = nn.ReLU()
+        self.relu = None
+        if last_relu:
+            self.relu = nn.ReLU()
         self.downsample = downsample
 
     def forward(self, x: Tensor) -> Tensor:
@@ -64,8 +71,10 @@ class Bottleneck(nn.Module):
         out = self.conv2(out)
         out = self.conv3(out)
         out += identity  ## fixme
-
-        return self.relu(out)
+        if self.relu:
+            return self.relu(out)
+        
+        return out
 
 
 class ResNet(nn.Module):
@@ -91,14 +100,17 @@ class ResNet(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
 
             ## Features with Skip Connections
-            self._make_layer(block, 64, n_blocks[0], 1),
-            self._make_layer(block, 128, n_blocks[1], 2),
-            self._make_layer(block, 256, n_blocks[2], 2),
-            self._make_layer(block, 512, n_blocks[3], 2)
+            *self._make_layer(block, 64, n_blocks[0], 1),
+            *self._make_layer(block, 128, n_blocks[1], 2),
+            *self._make_layer(block, 256, n_blocks[2], 2),
+            *self._make_layer(block, 512, n_blocks[3], 2, False)
         )
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
                
-        self.top_layer = nn.Linear(in_features=512*block.expansion, out_features=num_classes)
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(in_features=512*block.expansion, out_features=num_classes),
+        )
 
         self.classifier = self.top_layer
 
@@ -122,7 +134,7 @@ class ResNet(nn.Module):
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
 
-    def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1) -> nn.Module:
+    def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1, last_relu=True) -> nn.Module:
         layers = []
         downsample = None
 
@@ -137,7 +149,7 @@ class ResNet(nn.Module):
         self.in_channels = out_channels * block.expansion
 
         for _ in range(1, n_blocks):
-            layers.append(block(self.in_channels, out_channels))
+            layers.append(block(in_channel=self.in_channels, out_channel=out_channels, last_relu=last_relu))
 
         return layers
 
@@ -168,17 +180,17 @@ def resnet18(input_dim=3, num_classes=10, grayscale=False, sobel=False):
     return ResNet(BasicBlock, (2, 2, 2, 2), input_dim, num_classes, grayscale, sobel, 'ResNet18')
 
 
-def resnet34(img_channels: int, num_classes: int, grayscale=False, sobel=False):
-    return ResNet(BasicBlock, (3, 4, 6, 3), img_channels, num_classes, grayscale, sobel)
+def resnet34(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(BasicBlock, (3, 4, 6, 3), input_dim, num_classes, grayscale, sobel, 'ResNet34')
 
 
 def resnet50(input_dim=3, num_classes=10, grayscale=False, sobel=False):
     return ResNet(Bottleneck, (3, 4, 6, 3), input_dim, num_classes, grayscale, sobel, 'ResNet50')
 
 
-def resnet101(img_channels: int, num_classes: int, grayscale=False, sobel=False):
-    return ResNet(Bottleneck, (3, 4, 23, 3), img_channels, num_classes, grayscale, sobel)
+def resnet101(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(Bottleneck, (3, 4, 23, 3), input_dim, num_classes, grayscale, sobel, 'ResNet101')
 
 
-def resnet152(img_channels: int, num_classes: int, grayscale=False, sobel=False):
-    return ResNet(Bottleneck, (3, 8, 36, 3), img_channels, num_classes, grayscale, sobel)
+def resnet152(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(Bottleneck, (3, 8, 36, 3), input_dim, num_classes, grayscale, sobel, 'ResNet152')

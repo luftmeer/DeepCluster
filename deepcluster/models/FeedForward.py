@@ -10,22 +10,27 @@ class FeedForward(nn.Module):
         C, H, W = input_dim
         self.features = nn.Sequential(
             nn.Linear(C * H * W, 128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Linear(128, 128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Linear(128, 64),
-            nn.ReLU()
+            nn.ReLU(inplace=True)
         )
         self.classifier = nn.Sequential(
             nn.Linear(64, 64),
-            nn.ReLU()
+            
         )
-        self.top_layer = nn.Linear(64, num_classes)
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(64, num_classes))
 
     def forward(self, x: Tensor):
         out = x.view(x.size(0), -1)
         out = self.features(out)
         out = self.classifier(out)
+        
+        if self.compute_features:
+            return out
 
         if self.top_layer:
             out = self.top_layer(out)

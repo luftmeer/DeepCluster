@@ -361,35 +361,35 @@ def main(args):
         )
     elif args.arch == "ResNet18":
         model = resnet18(
-            img_channels=args.input_dim,
+            input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
             sobel=args.sobel,
         )
     elif args.arch == "ResNet34":
         model = resnet34(
-            img_channels=args.input_dim,
+            input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
             sobel=args.sobel,
         )
     elif args.arch == "ResNet50":
         model = resnet50(
-            img_channels=args.input_dim,
+            input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
             sobel=args.sobel,
         )
     elif args.arch == "ResNet101":
         model = resnet101(
-            img_channels=args.input_dim,
+            input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
             sobel=args.sobel,
         )
     elif args.arch == "ResNet152":
         model = resnet152(
-            img_channels=args.input_dim,
+            input_dim=args.input_dim,
             num_classes=args.num_classes,
             grayscale=args.grayscale,
             sobel=args.sobel,
