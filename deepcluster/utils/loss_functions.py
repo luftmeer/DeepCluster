@@ -44,43 +44,6 @@ class ContrastiveLoss(nn.Module):
         return loss
 
 
-class NT_XentLoss(torch.nn.Module):
-    def __init__(self, batch_size, temperature):
-        super(NT_XentLoss, self).__init__()
-        self.batch_size = batch_size
-        self.temperature = temperature
-        self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
-        self.mask = self._get_correlated_mask().type(torch.bool)
-
-    def _get_correlated_mask(self):
-        mask = torch.ones(
-            (2 * self.batch_size, 2 * self.batch_size), dtype=torch.float32
-        )
-        mask = mask.fill_diagonal_(0)
-        for i in range(self.batch_size):
-            mask[i, self.batch_size + i] = 0
-            mask[self.batch_size + i, i] = 0
-        return mask
-
-    def forward(self, z_i, z_j):
-        N = 2 * self.batch_size
-        z = torch.cat((z_i, z_j), dim=0)
-
-        sim = torch.mm(z, z.T) / self.temperature
-        sim_i_j = torch.diag(sim, self.batch_size)
-        sim_j_i = torch.diag(sim, -self.batch_size)
-
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)
-        negative_samples = sim[self.mask].reshape(N, -1)
-
-        labels = torch.zeros(N).to(positive_samples.device).long()
-        logits = torch.cat((positive_samples.unsqueeze(1), negative_samples), dim=1)
-        loss = self.criterion(logits, labels)
-        loss /= N
-
-        return loss
-
-
 def loss_function_loader(loss_fn: str):
     """Simple Wrapper to load a Loss Function of a pre-defined selection.
 
@@ -118,10 +81,8 @@ def contrastive_loss_function_loader(loss_fn: str):
     Loss Function object.
     """
 
-    if loss_fn not in ["Contrastive", "NT_Xent"]:
+    if loss_fn not in ["Contrastive"]:
         raise ValueError(f"Selected loss function {loss_fn} not supported.")
 
     if loss_fn == "Contrastive":
         return ContrastiveLoss()
-    elif loss_fn == "NT_Xent":
-        return NT_XentLoss()

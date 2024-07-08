@@ -6,7 +6,6 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
         self.compute_features = False
         self.features = nn.Sequential(
-            #nn.Flatten(),
             nn.Linear(input_dim, 500),
             nn.ReLU(inplace=True),
             nn.Linear(500, 500),
@@ -38,4 +37,4 @@ class FeedForward(nn.Module):
         return self.__repr__()
 
     def __repr__(self) -> str:
-        return 'AlexNet'
+        return 'FeedForward'
