@@ -6,7 +6,7 @@ from torch import Tensor
 class BasicBlock(nn.Module):
     expansion: int = 1
 
-    def __init__(self, in_channel, out_channel, stride=1, downsample=None):
+    def __init__(self, in_channel, out_channel, stride=1, downsample=None, last_relu=True):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channel, out_channel, kernel_size=3, stride=stride, padding=1),
@@ -17,7 +17,9 @@ class BasicBlock(nn.Module):
             nn.Conv2d(out_channel, out_channel, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(out_channel)
         )
-        self.relu = nn.ReLU()
+        self.relu = None
+        if last_relu:
+            self.relu = nn.ReLU()
         self.downsample = downsample
 
     def forward(self, x: Tensor) -> Tensor:
@@ -29,13 +31,16 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out += identity
 
-        return self.relu(out)
+        if self.relu:
+            return self.relu(out)
+        
+        return out
 
 
 class Bottleneck(nn.Module):
     expansion: int = 4
 
-    def __init__(self, in_channel, out_channel, stride=1, downsample=None):
+    def __init__(self, in_channel, out_channel, stride=1, downsample=None, last_relu=True):
         super(Bottleneck, self).__init__()
 
         self.conv1 = nn.Sequential(
@@ -52,7 +57,9 @@ class Bottleneck(nn.Module):
             nn.Conv2d(out_channel, out_channel * self.expansion, 1, bias=False),
             nn.BatchNorm2d(out_channel * self.expansion)
         )
-        self.relu = nn.ReLU()
+        self.relu = None
+        if last_relu:
+            self.relu = nn.ReLU()
         self.downsample = downsample
 
     def forward(self, x: Tensor) -> Tensor:
@@ -63,43 +70,50 @@ class Bottleneck(nn.Module):
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
-        out += identity
-
-        return self.relu(out)
+        out += identity  ## fixme
+        if self.relu:
+            return self.relu(out)
+        
+        return out
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, n_blocks: iter, input_dim: int = 3, num_classes: int = 1000, grayscale: bool = False, sobel: bool = False, name: str = 'ResNet'):
+    def __init__(self,
+                 block,
+                 n_blocks: iter,
+                 input_dim: int = 3,
+                 num_classes: int = 1000,
+                 grayscale=False,
+                 sobel=False,
+                 name: str = "ResNet"):
+
         super(ResNet, self).__init__()
         self.compute_features = False
         self.name = name
         self.in_channels: int = 64
 
-        self.conv1 = nn.Conv2d(input_dim, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(self.in_channels)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.layer1 = self._make_layer(block, 64, n_blocks[0], 1)
-        self.layer2 = self._make_layer(block, 128, n_blocks[1], 2)
-        self.layer3 = self._make_layer(block, 256, n_blocks[2], 2)
-        self.layer4 = self._make_layer(block, 512, n_blocks[3], 2)
-
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        
         self.features = nn.Sequential(
-            self.conv1,
-            self.bn1,
-            self.relu,
-            self.maxpool,
-            *self.layer1,
-            *self.layer2,
-            *self.layer3,
-            *self.layer4
+            ## First Features
+            nn.Conv2d(input_dim, self.in_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(self.in_channels),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+
+            ## Features with Skip Connections
+            *self._make_layer(block, 64, n_blocks[0], 1),
+            *self._make_layer(block, 128, n_blocks[1], 2),
+            *self._make_layer(block, 256, n_blocks[2], 2),
+            *self._make_layer(block, 512, n_blocks[3], 2, False)
         )
-        
-        self.top_layer = nn.Linear(in_features=512*block.expansion, out_features=num_classes)
-        
+        self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+               
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(in_features=512*block.expansion, out_features=num_classes),
+        )
+
+        self.classifier = self.top_layer
+
         # Define grayscale Filter
         self.grayscale = None
         if grayscale:
@@ -108,6 +122,7 @@ class ResNet(nn.Module):
             self.grayscale.bias.data.zero_()
             for parameter in self.grayscale.parameters():
                 parameter.require_grad = False
+
         
         # Define Sobel Filter
         self.sobel = None
@@ -119,7 +134,7 @@ class ResNet(nn.Module):
             for parameter in self.sobel.parameters():
                 parameter.require_grad = False
 
-    def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1) -> nn.Module:
+    def _make_layer(self, block, out_channels: int, n_blocks: int, stride=1, last_relu=True) -> nn.Module:
         layers = []
         downsample = None
 
@@ -130,37 +145,25 @@ class ResNet(nn.Module):
                 nn.BatchNorm2d(out_channels * block.expansion)
             )
 
-        layer = block(self.in_channels, out_channels, stride, downsample)
-        layers.append(layer)
-        self.in_channels *= block.expansion
+        layers.append(block(self.in_channels, out_channels, stride, downsample))
+        self.in_channels = out_channels * block.expansion
 
         for _ in range(1, n_blocks):
-            layer = block(self.in_channels, out_channels)
-            layers.append(layer)
+            layers.append(block(in_channel=self.in_channels, out_channel=out_channels, last_relu=last_relu))
 
         return layers
 
-    def forward(self, X: Tensor) -> Tensor:
-        if self.grayscale:
-                X = self.grayscale(X)
-        
-        if self.sobel:
-            X = self.sobel(X)
-            
-        '''out = self.conv1(X)
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.maxpool(out)
+    def forward(self, x: Tensor) -> Tensor:
 
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)'''
-        
-        out = self.features(X)
-        if self.compute_features: # Exit early with only returning the feature data
-            return out
-        
+        if self.grayscale is not None:
+            x = self.grayscale(x)
+        if self.sobel is not None:
+            x = self.sobel(x)
+
+        out = self.features(x)
+        if self.compute_features:   ## Exit early with flattened feature maps
+            return out.view(out.size(0), -1)
+
         out = self.avgpool(out)
         out = torch.flatten(out, 1)
         out = self.top_layer(out)
@@ -177,17 +180,17 @@ def resnet18(input_dim=3, num_classes=10, grayscale=False, sobel=False):
     return ResNet(BasicBlock, (2, 2, 2, 2), input_dim, num_classes, grayscale, sobel, 'ResNet18')
 
 
-def resnet34(sobel=False):
-    return ResNet(BasicBlock, (3, 4, 6, 3, sobel))
+def resnet34(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(BasicBlock, (3, 4, 6, 3), input_dim, num_classes, grayscale, sobel, 'ResNet34')
 
 
 def resnet50(input_dim=3, num_classes=10, grayscale=False, sobel=False):
     return ResNet(Bottleneck, (3, 4, 6, 3), input_dim, num_classes, grayscale, sobel, 'ResNet50')
 
 
-def resnet101(sobel=False):
-    return ResNet(Bottleneck, (3, 4, 23, 3, sobel))
+def resnet101(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(Bottleneck, (3, 4, 23, 3), input_dim, num_classes, grayscale, sobel, 'ResNet101')
 
 
-def resnet152(sobel=False):
-    return ResNet(Bottleneck, (3, 8, 36, 3, sobel))
+def resnet152(input_dim=3, num_classes=10, grayscale=False, sobel=False):
+    return ResNet(Bottleneck, (3, 8, 36, 3), input_dim, num_classes, grayscale, sobel, 'ResNet152')

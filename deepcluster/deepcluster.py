@@ -833,11 +833,8 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
-        for i, (input, _) in tqdm(
-            enumerate(data),
-            desc="Computing Features",
-            total=len(data),
-        ):
+
+        for i, (input, _) in tqdm(enumerate(data), desc="Computing Features", total=len(data),):
 
             input = input.to(self.device)
 
@@ -851,10 +848,11 @@ class DeepCluster(BaseEstimator):
 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
-                features[i * self.batch_size : (i + 1) * self.batch_size] = aux
+                features[i * self.batch_size: (i + 1) * self.batch_size] = aux
+
             else:
                 # Rest of the data
-                features[i * self.batch_size :] = aux
+                features[i * self.batch_size:] = aux
 
             # Free up GPU memory
             del input, aux
@@ -972,9 +970,7 @@ class DeepCluster(BaseEstimator):
 
         return labels
 
-    def create_pseudo_labeled_dataset(
-        self, dataset: data.Dataset, labels: list, transform: transforms
-    ) -> data.Dataset:
+    def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
 
         Parameters

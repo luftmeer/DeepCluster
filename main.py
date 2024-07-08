@@ -10,8 +10,10 @@ from torchvision import transforms
 from deepcluster.deepcluster import DeepCluster
 
 # CNN Models
+from deepcluster.models.FeedForward import FeedForward
 from deepcluster.models.AlexNet import AlexNet
 from deepcluster.models.VGG import VGG16
+from deepcluster.models.ResNet import resnet18, resnet34, resnet50, resnet101, resnet152
 
 # Utils
 from deepcluster.utils import datasets, loss_functions, optimizer
@@ -27,24 +29,20 @@ def parse_args():
     )
 
     # CNN Model Arguments
-    parser.add_argument(
-        "--arch",
-        type=str,
-        choices=["AlexNet", "VGG16"],
-        default="AlexNet",
-        help="CNN architecture (default: AlexNet)",
-    )
-    parser.add_argument(
-        "--input_dim",
-        type=int,
-        default=1,
-        help=textwrap.dedent(
-            """\
+    parser.add_argument("--arch",
+                        type=str,
+                        choices=["FeedForward", "AlexNet", "VGG16", "ResNet18", "ResNet34", "ResNet50", "ResNet101",
+                                 "ResNet152"],
+                        default="AlexNet",
+                        help="CNN architecture (default: AlexNet)"
+                        )
+    parser.add_argument("--input_dim",
+                        type=int, default=1, help=textwrap.dedent('''\
         Input Dimension for the CNN architecture (default: 1)
          - 3 for colored images
          - 2 for images with sobel filtering (and grayscale when original inputs are colored images)
          - 1 for b/w images
-        """
+        '''
         ),
     )
     parser.add_argument(
@@ -350,7 +348,12 @@ def main(args):
 
     # Model Loading
     print("Loading Model...")
-    if args.arch == "AlexNet":
+    if args.arch == "FeedForward":
+        model = FeedForward(
+            input_dim=(args.input_dim, 224, 224),
+            num_classes=args.num_classes
+        )
+    elif args.arch == "AlexNet":
         model = AlexNet(
             input_dim=args.input_dim,
             num_classes=args.num_classes,
@@ -364,6 +367,41 @@ def main(args):
             grayscale=args.grayscale,
             sobel=args.sobel,
         )
+    elif args.arch == "ResNet18":
+        model = resnet18(
+            input_dim=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet34":
+        model = resnet34(
+            input_dim=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet50":
+        model = resnet50(
+            input_dim=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet101":
+        model = resnet101(
+            input_dim=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
+    elif args.arch == "ResNet152":
+        model = resnet152(
+            input_dim=args.input_dim,
+            num_classes=args.num_classes,
+            grayscale=args.grayscale,
+            sobel=args.sobel,
+        )
     print("Model Loaded...")
 
     # Main Optimizer Loading
@@ -372,6 +410,7 @@ def main(args):
         parameters = filter(lambda x: x.requires_grad, model.parameters())
     else:
         parameters = model.parameters()
+
     if args.optimizer == "SGD":
         model_optimizer = optimizer.optimizer_loader(
             optimizer_name=args.optimizer,
