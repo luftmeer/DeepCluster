@@ -9,14 +9,14 @@ import torch
 from torch.utils import data
 from torch import Tensor, nn, optim
 from torch.backends import cudnn
+from torcheval.metrics import MulticlassAccuracy
+from torchvision import transforms
 from clustpy.metrics import unsupervised_clustering_accuracy
 from sklearn.base import BaseEstimator
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.preprocessing import normalize
-from torcheval.metrics import MulticlassAccuracy
-from torchvision import transforms
 from tqdm import tqdm
 
 from .utils import faiss_kmeans

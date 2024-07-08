@@ -20,6 +20,7 @@ class AlexNet(nn.Module):
             When set to True, the sobel filters are added and adjust the dataset to grayscale and enhance the edge visibility.
         """
         super(AlexNet, self).__init__()
+        self.compute_features = False
         self.features = nn.Sequential(
             # First Layer
             nn.Conv2d(in_channels=input_dim, out_channels=96, kernel_size=11, stride=4, padding=2),
@@ -53,10 +54,12 @@ class AlexNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
             nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
         )
         
-        self.top_layer = nn.Linear(4096, num_classes)
+        self.top_layer = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
         
         # Initialize weights
         self._initialize_weights()
@@ -97,34 +100,17 @@ class AlexNet(nn.Module):
             X = self.classifier(X)
             if torch.isnan(X).any():
                 print("NaN values found after classifier")
+            
+            # If model is in compute_features mode, return features up to this state for classification process
+            if self.compute_features:
+                return X
+            
             if self.top_layer:
                 X = self.top_layer(X)
             if torch.isnan(X).any():
                 print("NaN values found after top_layer")
             return X
         
-        
-    # def forward(self, X: torch.Tensor):
-    #     """Training function for the AlexNet Model.
-
-    #     Parameter
-    #     ---------
-    #         X: torch.Tensor
-    #             Batched image dataset to be trained on.
-
-    #     Returns
-    #     -------
-    #         torch.Tensor
-    #             #TODO tbd
-    #     """
-        # if self.sobel:
-        #     X = self.sobel(X)
-        # X = self.features(X)
-        # X = torch.flatten(X, 1)
-        # X = self.classifier(X)
-        # if self.top_layer:
-        #     X = self.top_layer(X)
-        # return X
     def __str__(self) -> str:
         return self.__repr__()
     
