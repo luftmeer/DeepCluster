@@ -174,6 +174,9 @@ def parse_args():
     # Seed
     parser.add_argument("--seed", type=int, default=None, help="Define a seed that is used when initializing the model. (default: None)")
 
+    # Removing Top Layer as done in original Implementation
+    parser.add_argument("--remove_head", action="store_true", help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.")
+    
     # Contrastive Strategies
     parser.add_argument("--deep_cluster_and_contrastive_loss", action="store_true")
 
@@ -295,6 +298,7 @@ def main(args):
         metrics_metadata=str(args),
         seed=args.seed,
         deep_cluster_and_contrastive_loss=args.deep_cluster_and_contrastive_loss,
+        remove_head=args.remove_head,
     )
 
     print("Running model...")
