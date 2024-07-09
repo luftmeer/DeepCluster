@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import numpy as np
+import torch
+import torchvision
 from PIL import Image
 from tinyimagenet import TinyImageNet
 from torch.utils import data
@@ -160,8 +162,21 @@ def dataset_loader(
             root=data_dir, split=split, transform=tf, download=True
         )
 
-        # preprocess the dataset
-        dataset.data = np.array(list(create_numpy_dataset(dataset)))
+        # preprocess data
+        gtsrb_data = np.array(list(create_numpy_dataset(dataset)))
+        gtsrb_data = torch.tensor(gtsrb_data, dtype=torch.float32)
+        gtsrb_data = gtsrb_data.permute(0, 3, 1, 2)
+        print("This is the shape", gtsrb_data.shape)
+        gtsrb_data = torchvision.transforms.functional.equalize(
+            gtsrb_data.to(torch.uint8)
+        )
+        gtsrb_data = gtsrb_data.permute(0, 2, 3, 1)
+        gtsrb_data = gtsrb_data.numpy()
+
+        # add data to the dataset
+        dataset.data = gtsrb_data
+
+        # add targets to the dataset
         dataset.targets = np.array(list(create_numpy_dataset_targets(dataset)))
 
     else:
