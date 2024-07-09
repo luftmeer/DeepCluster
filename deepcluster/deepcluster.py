@@ -511,20 +511,7 @@ class DeepCluster(BaseEstimator):
         true_labels = []
 
         if self.reassign_optimizer_tl:
-            if str(self.optimizer_tl).split(" ")[0] == "SGD":
-                self.optimizer_tl = optim.SGD(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    momentum=self.optim_tl_momentum,
-                    weight_decay=self.optim_tl_weight_decay,
-                )
-            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-                self.optimizer_tl = optim.Adam(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                    weight_decay=self.optim_tl_weight_decay,
-                )
+            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
 
         if self.metrics:
             end = time.time()
@@ -643,21 +630,9 @@ class DeepCluster(BaseEstimator):
         predicted_labels = []
         true_labels = []
 
+        # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            if str(self.optimizer_tl).split(" ")[0] == "SGD":
-                self.optimizer_tl = optim.SGD(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    momentum=self.optim_tl_momentum,
-                    weight_decay=self.optim_tl_weight_decay,
-                )
-            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-                self.optimizer_tl = optim.Adam(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                    weight_decay=self.optim_tl_weight_decay,
-                )
+            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
 
         if self.metrics:
             end = time.time()
@@ -982,6 +957,34 @@ class DeepCluster(BaseEstimator):
         """
         return PseudoLabeledData(labels, dataset, transform)
 
+    def reassign_optimizer(self, current_optimizer: optim.Optimizer, parameters: object) -> optim.Optimizer:
+        """Helper function to reassign a optimizer.
+        Supported for SGD and Adam optimizers.
+        
+        Parameters
+        ----------
+        current_optimizer: optim.Optimizer,
+            The currently used optimizer where the necessary information is extracted and to be "reset".
+            
+        Returns
+        -------
+        optim.Optimizer:
+            Reassigned and freshly created optimizer.
+        """
+        
+        if str(current_optimizer).split(" ")[0] == "SGD":
+            lr = current_optimizer.param_groups[0]["lr"]
+            momentum = current_optimizer.param_groups[0]["momentum"]
+            weight_decay = current_optimizer.param_groups[0]["weight_decay"]
+            
+            return optim.SGD(params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
+        elif str(current_optimizer).split(" ")[0] == "Adam":
+            lr = current_optimizer.param_groups[0]["lr"]
+            betas = current_optimizer.param_groups[0]["betas"]
+            weight_decay = current_optimizer.param_groups[0]["weight_decay"]
+            
+            return optim.Adam(params=parameters, lr=lr, betas=betas, weight_decay=weight_decay)
+    
     def print_results(
         self,
         epoch: int,
