@@ -244,7 +244,7 @@ class DeepCluster(BaseEstimator):
         self.best_model = 0.0
 
         if self.checkpoint and not self.checkpoint_file:
-            self.checkpoint = (
+            self.checkpoint_file = (
                 f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
             )
 
@@ -275,7 +275,9 @@ class DeepCluster(BaseEstimator):
             print(f"Saving the current checkpoint at epoch {epoch + 1}..")
 
         if best_model:
-            filename = f"{self.checkpoint}.best"  # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+            filename = f"{self.checkpoint_file}.best"  # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+        else:
+            filename = self.checkpoint_file
 
         torch.save(
             {
