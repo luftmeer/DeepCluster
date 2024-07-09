@@ -120,7 +120,6 @@ def parse_args():
              - tinyimagenet (train, val, test)
              - STL10 (train, test, unlabeled, train+unlabeled)
              - GTSRB (train, test)
-             - Imagenette (train, val)
             """
         ),
     )
@@ -516,5 +515,6 @@ if __name__ == "__main__":
     main(args)
 
 # python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./metrics_file.csv" --verbose
+# python3 main.py --num_classes 10 --epochs 3 --dataset GTSRB --metrics --metrics_file "./metrics_file.csv" --verbose
 
 # python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./contrastive_strategy_2_metrics_file.csv" --verbose --contrastive_strategy_2
