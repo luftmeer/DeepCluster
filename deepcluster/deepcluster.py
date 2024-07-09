@@ -329,6 +329,7 @@ class DeepCluster(BaseEstimator):
         
         if self.metrics:
             end = time.time()
+            
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose:
@@ -338,12 +339,6 @@ class DeepCluster(BaseEstimator):
             if self.remove_head:
                 self.model.top_layer = None
                 if self.verbose: print('Removed Top Layer head.')
-            
-            # TODO: Cleanup
-            '''if 'ResNet' not in str(self.model):
-                self.model.classifier = nn.Sequential(
-                    *list(self.model.classifier.children())[:-1]
-                )'''
 
             # Compute Features
             features = self.compute_features(data)
@@ -472,6 +467,7 @@ class DeepCluster(BaseEstimator):
             del pred_accuracy
             del losses
 
+    @torch.no_grad()
     def predict(self, batch: Tensor):
         """
         Makes predictions on the given data batch, based on the ConvNet (self.model) Output
@@ -480,9 +476,9 @@ class DeepCluster(BaseEstimator):
         :return: List of output neurons for each data point, which maximizes the class probability
         """
         self.model.eval()
-        with torch.no_grad():
-            predictions = self.model(batch)
-            pred_idx = [torch.argmax(pred) for pred in predictions]
+       
+        predictions = self.model(batch)
+        pred_idx = [torch.argmax(pred) for pred in predictions]
 
         return pred_idx
 
