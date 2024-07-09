@@ -82,7 +82,7 @@ The Model can simply be run by using the [main.py](/main.py) file in this root d
 
 ```text
 usage: python3 main.py [-h] [--arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}] [--input_dim INPUT_DIM] [--num_classes NUM_CLASSES] [--sobel] [--grayscale] [--requires_grad] [--epochs EPOCHS]
-                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB,Imagenette_full,Imagenette_320,Imagenette_160}] [--data_dir DATA_DIR] [--ds_train]
+                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB}] [--data_dir DATA_DIR] [--ds_train]
                        [--ds_split {train,test,unlabeled,train+unlabeled,val}] [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR] [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1] [--beta2 BETA2]
                        [--param_requires_grad] [--reassign_optimizer_tl] [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL] [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL] [--beta2_tl BETA2_TL]
                        [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca] [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION] [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}] [--metrics]
@@ -106,7 +106,7 @@ options:
   --grayscale           Reduces colored images to b/w images. (default: False)
   --requires_grad       Activates the requires_grad option for the input images in the training loop. Mainly used for analytical purposes (default: True)
   --epochs EPOCHS       Sets the training epochs for the model. (default: 100)
-  --dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB,Imagenette_full,Imagenette_320,Imagenette_160}
+  --dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB}
                         Define which dataset a model is trained with. (default: MNIST)
   --data_dir DATA_DIR   Where the training data is locally downloaded and extracted. (default: /data)
   --ds_train            Selects the training images for certain datasets (default: False):
@@ -114,14 +114,13 @@ options:
                          - CIFAR10
                          - FashionMNIST
                          - KMNIST
-                        
+
                         When not seltected, only the test images are downloaded, extracted and/or used.
   --ds_split {train,test,unlabeled,train+unlabeled,val}
                         Selects the type of data for sepcific datasets (default: train):
                          - tinyimagenet (train, val, test)
                          - STL10 (train, test, unlabeled, train+unlabeled)
                          - GTSRB (train, test)
-                         - Imagenette (train, val)
   --batch_size BATCH_SIZE
                         Batch size for the main and training Dataset. (default: 256)
   --optimizer {SGD,Adam}
