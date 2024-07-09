@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import numpy as np
+from PIL import Image
 from tinyimagenet import TinyImageNet
 from torch.utils import data
 from torchvision import datasets, transforms
+from tqdm import tqdm
 
 AVAILABLE_DATASETS = [
     "CIFAR10",
@@ -63,6 +66,30 @@ NORMALIZATION = {
         mean=[0.350533, 0.31418112, 0.32720327], std=[0.2752962, 0.25941706, 0.26697195]
     ),
 }
+
+
+def create_numpy_dataset(dataset):
+    for s in tqdm(
+        dataset._samples,
+        total=len(dataset._samples),
+        desc="Creating numpy dataset",
+    ):
+        img = Image.open(s[0])
+        img = img.resize((320, 320))
+        img = np.array(img)
+
+        if len(img.shape) != 3 or img.shape[2] != 3:
+            # make black and white images 3 channel
+            img = np.stack((img,) * 3, axis=-1)
+
+        yield img
+
+
+def create_numpy_dataset_targets(dataset):
+    for s in tqdm(
+        dataset._samples, total=len(dataset._samples), desc="Creating numpy dataset"
+    ):
+        yield s[1]
 
 
 class PairAugmentationTransform:
@@ -132,6 +159,10 @@ def dataset_loader(
         dataset = datasets.GTSRB(
             root=data_dir, split=split, transform=tf, download=True
         )
+
+        # preprocess the dataset
+        dataset.data = np.array(list(create_numpy_dataset(dataset)))
+        dataset.targets = np.array(list(create_numpy_dataset_targets(dataset)))
 
     else:
         loader = getattr(datasets, dataset_name)
