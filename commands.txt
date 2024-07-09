@@ -1,0 +1,9 @@
+### CIFAR10 ###
+DeepCluster:
+python3 main.py --num_classes 10 --epochs 10 --dataset CIFAR10 --metrics --metrics_file "./deepcluster_cifar10.csv" --verbose --input_dim 3
+
+DeepCluster + Contrastive Strategy 1:
+python3 main.py --num_classes 10 --epochs 10 --dataset CIFAR10 --metrics --metrics_file "./contrastive_strategy_1_cifar10.csv"--input_dim 3 --verbose --contrastive_strategy_1
+
+DeepCluster + Contrastive Strategy 2:
+python3 main.py --num_classes 10 --epochs 10 --dataset CIFAR10 --metrics --metrics_file "./contrastive_strategy_2_cifar10.csv" --input_dim 3 --verbose --contrastive_strategy_2
