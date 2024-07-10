@@ -926,39 +926,6 @@ class DeepCluster(BaseEstimator):
         self.optimizer.step()
         self.optimizer_tl.step()
 
-    def reassign_top_layer_optimizer(self):
-        """
-        Reassigns the optimizer for the top layer of the model based on the specified optimizer type.
-
-        The function checks the current optimizer type for the top layer and reinitializes it with
-        the appropriate parameters.
-
-        If the optimizer type is:
-            - "SGD": Initializes an SGD optimizer with specified learning rate, momentum, and weight decay.
-            - "Adam": Initializes an Adam optimizer with specified learning rate, beta values, and weight decay.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-
-        if str(self.optimizer_tl).split(" ")[0] == "SGD":
-            self.optimizer_tl = optim.SGD(
-                self.model.top_layer.parameters(),
-                lr=self.optim_tl_lr,
-                momentum=self.optim_tl_momentum,
-                weight_decay=self.optim_tl_weight_decay,
-            )
-        elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-            self.optimizer_tl = optim.Adam(
-                self.model.top_layer.parameters(),
-                lr=self.optim_tl_lr,
-                betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                weight_decay=self.optim_tl_weight_decay,
-            )
-
     def compute_features_and_output(self, input: torch.Tensor) -> tuple:
         """
         Computes the features and output of the model for a given input.
