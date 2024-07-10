@@ -17,6 +17,7 @@ from deepcluster.models.VGG import VGG16
 
 # Utils
 from deepcluster.utils import datasets, loss_functions, optimizer
+from deepcluster.utils.augmentations import get_augmentation_fn
 
 # from deepcluster.models.ResNet import resnet18, resnet50
 
@@ -341,6 +342,57 @@ def parse_args():
         help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.",
     )
 
+    parser.add_argument(
+        "--augmentation_resize",
+        type=int,
+        default=None,
+        help="Resize the input images to the given size.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_crop",
+        type=int,
+        default=None,
+        help="Randomly crop the input images to the given size.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_rotation",
+        type=int,
+        default=None,
+        help="Randomly rotate the input images to a random degree. between the given integer and the negative of the given integer.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_horizontal_flip",
+        action="store_true",
+        help="Randomly flip the input images horizontally.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_vertical_flip",
+        action="store_true",
+        help="Randomly flip the input images vertically.",
+    )
+
+    parser.add_argument(
+        "--augmentation_color_jitter",
+        action="store_true",
+        help="Randomly change the brightness, contrast and saturation of the input images.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_autocontrast",
+        action="store_true",
+        help="Randomly apply autocontrast to the input images.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_equalize",
+        action="store_true",
+        help="Randomly apply equalize to the input images.",
+    )
+
     return parser.parse_args()
 
 
@@ -463,6 +515,7 @@ def main(args):
             weight_decay=args.weight_decay_tl,
             betas=(args.beta1_tl, args.beta2_tl),
         )
+
     print("Created top layer Optimizer...")
 
     # Loss Function
@@ -509,6 +562,9 @@ def main(args):
         contrastive_strategy_1=args.contrastive_strategy_1,
         contrastive_strategy_2=args.contrastive_strategy_2,
         remove_head=args.remove_head,
+        augmentation_fn=(
+            get_augmentation_fn(args) if args.contrastive_strategy_2 else None
+        ),
     )
 
     print("Running model...")

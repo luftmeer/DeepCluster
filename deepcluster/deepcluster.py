@@ -93,6 +93,7 @@ class DeepCluster(BaseEstimator):
         contrastive_strategy_1: bool = False,
         contrastive_strategy_2: bool = False,
         remove_head: bool = False,
+        augmentation_fn: transforms = None,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
@@ -192,16 +193,7 @@ class DeepCluster(BaseEstimator):
         # was used in SimCLR and MoCo
         self.nt_xent_loss = SelfSupervisedLoss(NTXentLoss(temperature=0.5))
 
-        self.augmentation_fn = transforms.Compose(
-            [
-                transforms.Resize(230),
-                transforms.RandomCrop(224),
-                transforms.RandomHorizontalFlip(),  # Remove for MNIST
-                transforms.RandomRotation(10),
-                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
-                transforms.ToTensor(),
-            ]
-        )
+        self.augmentation_fn = augmentation_fn
 
         # flags for different contrastive strategies
         self.contrastive_strategy_1 = contrastive_strategy_1
@@ -337,7 +329,7 @@ class DeepCluster(BaseEstimator):
 
         if self.metrics:
             end = time.time()
-            
+
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose:
@@ -346,7 +338,8 @@ class DeepCluster(BaseEstimator):
             # Remove head
             if self.remove_head:
                 self.model.top_layer = None
-                if self.verbose: print('Removed Top Layer head.')
+                if self.verbose:
+                    print("Removed Top Layer head.")
 
             # Compute Features
             features = self.compute_features(data)
@@ -391,7 +384,7 @@ class DeepCluster(BaseEstimator):
             if self.remove_head:
                 # Add Top Layer back to Model
                 if self.verbose:
-                    print(f"Reattaching top layer head.")
+                    print("Reattaching top layer head.")
                 self.model.top_layer = nn.Sequential(
                     nn.ReLU(inplace=True),
                     nn.Linear(in_features=fd, out_features=self.k),
@@ -400,14 +393,24 @@ class DeepCluster(BaseEstimator):
                 self.model.top_layer[-1].bias.data.zero_()
                 self.model.top_layer.to(self.device)
 
-            if self.contrastive_strategy_2:
+            # Decide which training strategy to use
+            if self.contrastive_strategy_1:
                 (
                     losses,
                     pred_accuracy,
                     true_accuracy,
                     deep_cluster_losses,
                     contrastive_losses,
-                ) = self.train_positive_pairs(train_data)
+                ) = self.train_contrastive_strategy_1(train_data)
+
+            elif self.contrastive_strategy_2:
+                (
+                    losses,
+                    pred_accuracy,
+                    true_accuracy,
+                    deep_cluster_losses,
+                    contrastive_losses,
+                ) = self.train_contrastive_strategy_2(train_data)
             else:
                 (
                     losses,
@@ -415,7 +418,7 @@ class DeepCluster(BaseEstimator):
                     true_accuracy,
                     deep_cluster_losses,
                     contrastive_losses,
-                ) = self.train(train_data)
+                ) = self.train_deep_cluster(train_data)
 
             if self.metrics:
                 self.loss_overall_avg.update(torch.mean(losses))
@@ -485,42 +488,46 @@ class DeepCluster(BaseEstimator):
         :return: List of output neurons for each data point, which maximizes the class probability
         """
         self.model.eval()
-       
+
         predictions = self.model(batch)
         pred_idx = [torch.argmax(pred) for pred in predictions]
 
         return pred_idx
 
-    def train(self, train_data: data.DataLoader) -> tuple:
-        """Training method for each epoch using the training dataset.
-
-        Parameters
-        ----------
-        train_data: data.DataLoader
-            Training dataset for the CNN model.
-
-        Returns
-        -------
-        float: The average loss from the training.
+    def train_deep_cluster(self, train_data: data.DataLoader) -> tuple:
         """
+        Trains the model using the default DeepCluster algorithm.
+
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
+        """
+
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = MulticlassAccuracy()
+        (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
 
-        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        contrastive_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-        deep_clusster_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-
-        predicted_labels = []
-        true_labels = []
-
+        # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
 
         if self.metrics:
             end = time.time()
@@ -533,24 +540,7 @@ class DeepCluster(BaseEstimator):
             if self.requires_grad:
                 input.requires_grad = True
 
-            # Forward pass
-            if self.contrastive_strategy_1:
-                # Forward pass
-                if self.sobel:
-                    input = self.sobel(input)
-
-                features = self.model.features(input)
-
-                features = torch.flatten(features, 1)
-
-                features = self.model.classifier(features)
-                output = self.model.top_layer(features)
-                contrastive_loss = self.contrastive_criterion(features, target)
-
-                del features
-
-            else:
-                output = self.model(input)
+            output = self.model(input)
 
             deep_clusster_loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
@@ -566,32 +556,19 @@ class DeepCluster(BaseEstimator):
             # add the deep cluster loss to the deep cluster losses tensor
             deep_clusster_losses[i] = deep_clusster_loss.item()
 
-            # calculate accuracy and add it to accuracies tensor
-            _, predicted = output.max(1)
-
             for tar in target:
                 predicted_labels.append(tar.item())
 
             for true in true_target:
                 true_labels.append(true.item())
 
-            if self.contrastive_strategy_1:
-                # add the contrastive loss to the contrastive losses tensor
-                contrastive_losses[i] = contrastive_loss.item()
-                loss = deep_clusster_loss + contrastive_loss
-
-            else:
-                loss = deep_clusster_loss
+            loss = deep_clusster_loss
 
             # add the loss to the losses tensor
             losses[i] = loss.item()
 
             # Backward pass and optimize
-            self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer_tl.step()
+            self.do_backward_pass(loss)
 
             # Free up GPU memory
             del (
@@ -600,8 +577,6 @@ class DeepCluster(BaseEstimator):
                 output,
                 loss,
             )
-            if self.contrastive_strategy_1:
-                del contrastive_loss
             torch.cuda.empty_cache()
 
             # Train Metrics
@@ -626,37 +601,150 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
-    def train_positive_pairs(self, train_data: data.DataLoader) -> tuple:
-        """Training method for each epoch using the training dataset.
-
-        Parameters
-        ----------
-        train_data: data.DataLoader
-            Training dataset for the CNN model.
-
-        Returns
-        -------
-        float: The average loss from the training.
+    def train_contrastive_strategy_1(self, train_data: data.DataLoader) -> tuple:
         """
+        Trains the model using a combined contrastive and clustering loss strategy.
+        It uses Strategy 1, where the contrastive loss is calculated using the features from the model and the pseudo-labels.
+
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
+        """
+
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = MulticlassAccuracy()
+        (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
 
-        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        contrastive_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
+        if self.reassign_optimizer_tl:
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
+
+        if self.metrics:
+            end = time.time()
+        for i, (input, target, true_target) in tqdm(
+            enumerate(train_data), desc="Training", total=len(train_data)
+        ):
+            # Recasting target as LongTensor
+            target = target.type(torch.LongTensor)
+            input, target = input.to(self.device), target.to(self.device)
+            if self.requires_grad:
+                input.requires_grad = True
+
+            features, output = self.compute_features_and_output(input)
+            contrastive_loss = self.contrastive_criterion(features, target)
+
+            deep_clusster_loss = self.loss_criterion(output, target)
+            accuracy_metric.update(output, target)
+            # check Nan Loss
+            if torch.isnan(deep_clusster_loss):
+                print("targets", target)
+                print("Output", output)
+                print("Input", input)
+                print("Nan Loss", deep_clusster_loss)
+
+                break
+
+            # add the deep cluster loss to the deep cluster losses tensor
+            deep_clusster_losses[i] = deep_clusster_loss.item()
+
+            for tar in target:
+                predicted_labels.append(tar.item())
+
+            for true in true_target:
+                true_labels.append(true.item())
+
+            # add the contrastive loss to the contrastive losses tensor
+            contrastive_losses[i] = contrastive_loss.item()
+            loss = deep_clusster_loss + contrastive_loss
+
+            # add the loss to the losses tensor
+            losses[i] = loss.item()
+
+            # Backward pass and optimize
+            self.do_backward_pass(loss)
+
+            # Free up GPU memory
+            del (input, target, output, loss, features, contrastive_loss)
+            torch.cuda.empty_cache()
+
+            # Train Metrics
+            if self.metrics:
+                self.train_time.update(time.time() - end)
+                end = time.time()
+
+        predicted_labels = np.array(predicted_labels)
+        true_labels = np.array(true_labels)
+
+        # calculate unsupervised clustering accuracy
+        true_accuracy = unsupervised_clustering_accuracy(predicted_labels, true_labels)
+        true_accuracy = torch.tensor(true_accuracy)
+
+        # Return the losses and the accuracies for the predicted to pseudo labels and predicted to truth labels
+        return (
+            losses,
+            accuracy_metric.compute(),
+            true_accuracy,
+            deep_clusster_losses,
+            contrastive_losses,
         )
+
+    def train_contrastive_strategy_2(self, train_data: data.DataLoader) -> tuple:
+        """
+        Trains the model using a combined contrastive and clustering loss strategy.
+        It uses Strategy 2, where the contrastive loss is calculated using the features of two augmented images.
+        Contrastive loss is calculated using the features of two augmented images.
+
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
+        """
+
+        # Set model to train mode
+        self.model.train()
+
+        (
+            losses,
+            contrastive_losses,
+            _,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
+
         deep_clusster_losses = torch.zeros(
-            len(train_data) * 2, dtype=torch.float32, requires_grad=False
+            2 * len(train_data), dtype=torch.float32, requires_grad=False
         )
-
-        predicted_labels = []
-        true_labels = []
 
         # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
 
         if self.metrics:
             end = time.time()
@@ -680,28 +768,15 @@ class DeepCluster(BaseEstimator):
                 target.to(self.device),
             )
 
-            # Forward pass
-            if self.sobel:
-                input_1 = self.sobel(input_1)
-                input_2 = self.sobel(input_2)
-
-            features_1 = self.model.features(input_1)
-            features_2 = self.model.features(input_2)
-
-            features_1 = torch.flatten(features_1, 1)
-            features_2 = torch.flatten(features_2, 1)
-
-            features_1 = self.model.classifier(features_1)
-            features_2 = self.model.classifier(features_2)
-
-            output_1 = self.model.top_layer(features_1)
-            output_2 = self.model.top_layer(features_2)
+            features_1, output_1 = self.compute_features_and_output(input_1)
+            features_2, output_2 = self.compute_features_and_output(input_2)
 
             deep_clusster_loss_1 = self.loss_criterion(output_1, target)
             deep_clusster_loss_2 = self.loss_criterion(output_2, target)
 
             accuracy_metric.update(output_1, target)
             accuracy_metric.update(output_2, target)
+
             # check Nan Loss
             if torch.isnan(deep_clusster_loss_1):
                 print("targets", target)
@@ -728,9 +803,7 @@ class DeepCluster(BaseEstimator):
             for true in true_target:
                 true_labels.append(true.item())
 
-            contrastive_loss = self.nt_xent_loss(
-                features_1, features_2
-            )  # here we can also try with labels
+            contrastive_loss = self.nt_xent_loss(features_1, features_2)
 
             # add the contrastive loss to the contrastive losses tensor
             contrastive_losses[i] = contrastive_loss.item()
@@ -740,11 +813,7 @@ class DeepCluster(BaseEstimator):
             losses[i] = loss.item()
 
             # Backward pass and optimize
-            self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer_tl.step()
+            self.do_backward_pass(loss)
 
             # Free up GPU memory
             del (
@@ -781,28 +850,109 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
-    def calculate_contrastive_loss(self, input: Tensor, target: Tensor) -> Tensor:
-        # Computing Features for Contrastive Loss
+    def get_initial_logs(self, train_data: data.DataLoader) -> tuple:
+        """
+        Initializes and returns logging structures for tracking training metrics.
 
-        # calculate contrastive loss of features and pseudo labels
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data.
 
-        return contrastive_loss
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Tensor initialized to track the total losses for each batch.
+                - torch.Tensor: Tensor initialized to track the contrastive losses for each batch.
+                - torch.Tensor: Tensor initialized to track the deep cluster losses for each batch.
+                - MulticlassAccuracy: Metric object for tracking accuracy.
+                - list: List for storing predicted labels.
+                - list: List for storing true labels.
 
-    def calculate_nt_xent_loss(self, samples: Tensor) -> Tensor:
-        x1 = torch.stack(
-            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
+        The function initializes tensors and lists for logging the following metrics:
+            - Total losses per batch.
+            - Contrastive losses per batch.
+            - Deep cluster losses per batch.
+            - Predicted labels for accuracy computation.
+            - True labels for accuracy computation.
+        """
+
+        accuracy_metric = MulticlassAccuracy()
+
+        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        contrastive_losses = torch.zeros(
+            len(train_data), dtype=torch.float32, requires_grad=False
         )
-        x2 = torch.stack(
-            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
+        deep_clusster_losses = torch.zeros(
+            len(train_data), dtype=torch.float32, requires_grad=False
         )
 
-        x1_features = self.compute_features_for_batch(x1)
-        x2_features = self.compute_features_for_batch(x2)
+        predicted_labels = []
+        true_labels = []
 
-        # calculate contrastive loss of augmentations
-        loss = self.nt_xent_loss(x1_features, x2_features)
+        return (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        )
 
-        return loss
+    def do_backward_pass(self, loss: torch.Tensor) -> None:
+        """
+        Performs the backward pass and updates model weights based on the given loss.
+
+        Args:
+            loss (torch.Tensor): The computed loss for which gradients will be calculated.
+
+        Returns:
+            None
+
+        The function performs the following steps:
+            1. Resets the gradients of the model's parameters.
+            2. Resets the gradients of the top layer's parameters.
+            3. Computes the gradients by backpropagating the loss.
+            4. Updates the model's parameters using the optimizer.
+            5. Updates the top layer's parameters using the top layer optimizer.
+        """
+
+        self.optimizer.zero_grad()
+        self.optimizer_tl.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        self.optimizer_tl.step()
+
+    def compute_features_and_output(self, input: torch.Tensor) -> tuple:
+        """
+        Computes the features and output of the model for a given input.
+        Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
+
+        Args:
+            input (torch.Tensor): The input data for the model.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: The features extracted by the model.
+                - torch.Tensor: The output of the model's top layer.
+
+        The function performs the following steps:
+            1. Applies the Sobel filter to the input if specified.
+            2. Computes the features using the model's feature extractor.
+            3. Flattens the features.
+            4. Passes the features through the model's classifier.
+            5. Computes the output of the model's top layer.
+            6. Returns the features and the output.
+        """
+
+        if self.sobel:
+            input = self.sobel(input)
+
+        features = self.model.features(input)
+
+        features = torch.flatten(features, 1)
+
+        features = self.model.classifier(features)
+        output = self.model.top_layer(features)
+
+        return features, output
 
     @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
@@ -861,37 +1011,6 @@ class DeepCluster(BaseEstimator):
         self.model.compute_features = False
 
         return features
-
-    def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
-        """Computing the features based on the model prediction.
-
-        Parameter
-        ---------
-        data: data.DataLoader
-            Complete dataset.
-
-        Returns
-        -------
-        np.ndarray: Predicted features.
-        """
-        self.model.eval()
-
-        input = input.to(self.device)
-
-        if self.requires_grad:
-            input.requires_grad = True
-
-        aux = self.model(input).data
-
-        # if aux is numpy array convert it to torch tensor
-        if isinstance(aux, np.ndarray):
-            aux = torch.from_numpy(aux)
-
-        # Free up GPU memory
-        del input
-        torch.cuda.empty_cache()
-
-        return aux
 
     def pca_reduction(self, features: np.ndarray) -> np.ndarray:
         """Applies PCA reduction on the computed features and returns the transformed data.
@@ -981,34 +1100,40 @@ class DeepCluster(BaseEstimator):
         """
         return PseudoLabeledData(labels, dataset, transform)
 
-    def reassign_optimizer(self, current_optimizer: optim.Optimizer, parameters: object) -> optim.Optimizer:
+    def reassign_optimizer(
+        self, current_optimizer: optim.Optimizer, parameters: object
+    ) -> optim.Optimizer:
         """Helper function to reassign a optimizer.
         Supported for SGD and Adam optimizers.
-        
+
         Parameters
         ----------
         current_optimizer: optim.Optimizer,
             The currently used optimizer where the necessary information is extracted and to be "reset".
-            
+
         Returns
         -------
         optim.Optimizer:
             Reassigned and freshly created optimizer.
         """
-        
+
         if str(current_optimizer).split(" ")[0] == "SGD":
             lr = current_optimizer.param_groups[0]["lr"]
             momentum = current_optimizer.param_groups[0]["momentum"]
             weight_decay = current_optimizer.param_groups[0]["weight_decay"]
-            
-            return optim.SGD(params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
+
+            return optim.SGD(
+                params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay
+            )
         elif str(current_optimizer).split(" ")[0] == "Adam":
             lr = current_optimizer.param_groups[0]["lr"]
             betas = current_optimizer.param_groups[0]["betas"]
             weight_decay = current_optimizer.param_groups[0]["weight_decay"]
-            
-            return optim.Adam(params=parameters, lr=lr, betas=betas, weight_decay=weight_decay)
-    
+
+            return optim.Adam(
+                params=parameters, lr=lr, betas=betas, weight_decay=weight_decay
+            )
+
     def print_results(
         self,
         epoch: int,
