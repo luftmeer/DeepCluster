@@ -502,16 +502,20 @@ class DeepCluster(BaseEstimator):
         return pred_idx
 
     def train_deep_cluster(self, train_data: data.DataLoader) -> tuple:
-        """Training method for each epoch using the training dataset.
+        """
+        Trains the model using the default DeepCluster algorithm.
 
-        Parameters
-        ----------
-        train_data: data.DataLoader
-            Training dataset for the CNN model.
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
 
-        Returns
-        -------
-        float: The average loss from the training.
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
         """
         # Set model to train mode
         self.model.train()
@@ -625,16 +629,21 @@ class DeepCluster(BaseEstimator):
         )
 
     def train_contrastive_strategy_1(self, train_data: data.DataLoader) -> tuple:
-        """Training method for each epoch using the training dataset.
+        """
+        Trains the model using a combined contrastive and clustering loss strategy.
+        It uses Strategy 1, where the contrastive loss is calculated using the features from the model and the pseudo-labels.
 
-        Parameters
-        ----------
-        train_data: data.DataLoader
-            Training dataset for the CNN model.
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
 
-        Returns
-        -------
-        float: The average loss from the training.
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
         """
         # Set model to train mode
         self.model.train()
@@ -741,16 +750,22 @@ class DeepCluster(BaseEstimator):
         )
 
     def train_contrastive_strategy_2(self, train_data: data.DataLoader) -> tuple:
-        """Training method for each epoch using the training dataset.
+        """
+        Trains the model using a combined contrastive and clustering loss strategy.
+        It uses Strategy 2, where the contrastive loss is calculated using the features of two augmented images.
+        Contrastive loss is calculated using the features of two augmented images.
 
-        Parameters
-        ----------
-        train_data: data.DataLoader
-            Training dataset for the CNN model.
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
+                                        input data, pseudo-labels, and true labels.
 
-        Returns
-        -------
-        float: The average loss from the training.
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+                - torch.Tensor: Overall accuracy computed using pseudo-labels.
+                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+                - torch.Tensor: Losses from the clustering loss for each batch.
+                - torch.Tensor: Losses from the contrastive loss for each batch.
         """
         # Set model to train mode
         self.model.train()
