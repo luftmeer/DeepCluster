@@ -6,25 +6,32 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from torch.utils import data
-from torch import Tensor, nn, optim
-from torch.backends import cudnn
-from torcheval.metrics import MulticlassAccuracy
-from torchvision import transforms
 from clustpy.metrics import unsupervised_clustering_accuracy
 from PIL import Image
-from pytorch_metric_learning.losses import NTXentLoss, SelfSupervisedLoss
+from pytorch_metric_learning.losses import (
+    ContrastiveLoss,
+    NTXentLoss,
+    SelfSupervisedLoss,
+)
 from sklearn.base import BaseEstimator
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.preprocessing import normalize
+from torch import Tensor, nn, optim
+from torch.backends import cudnn
+from torch.utils import data
+from torcheval.metrics import MulticlassAccuracy
+from torchvision import transforms
 from tqdm import tqdm
 
 from .utils import faiss_kmeans
 from .utils.benchmarking import Meter
-from .utils.loss_functions import ContrastiveLoss
-from .utils.pseudo_labeled_dataset import PseudoLabeledData # Keep this dataset for scikit-learn clustering
+
+# from .utils.loss_functions import ContrastiveLoss
+from .utils.pseudo_labeled_dataset import (  # Keep this dataset for scikit-learn clustering
+    PseudoLabeledData,
+)
 from .utils.UnifiedSampler import UnifLabelSampler
 
 # Base folder for checkpoints
@@ -324,8 +331,9 @@ class DeepCluster(BaseEstimator):
         if self.remove_head:
             # Obtain in_features from last classification layer with k-cluster output
             fd = int(self.model.top_layer[-1].weight.size()[1])
-            if self.verbose: print(f'Removing Head: Storing out_feature value of size {fd}')
-        
+            if self.verbose:
+                print(f"Removing Head: Storing out_feature value of size {fd}")
+
         if self.metrics:
             end = time.time()
         for epoch in range(self.start_epoch, self.epochs):
@@ -336,13 +344,14 @@ class DeepCluster(BaseEstimator):
             # Remove head
             if self.remove_head:
                 self.model.top_layer = None
-                if self.verbose: print('Removed Top Layer head.')
-            
+                if self.verbose:
+                    print("Removed Top Layer head.")
+
             # TODO: Cleanup
-            '''if 'ResNet' not in str(self.model):
+            """if 'ResNet' not in str(self.model):
                 self.model.classifier = nn.Sequential(
                     *list(self.model.classifier.children())[:-1]
-                )'''
+                )"""
 
             # Compute Features
             features = self.compute_features(data)
@@ -385,10 +394,11 @@ class DeepCluster(BaseEstimator):
 
             if self.remove_head:
                 # Add Top Layer back to Model
-                if self.verbose: print(f'Reattaching top layer head.')
+                if self.verbose:
+                    print(f"Reattaching top layer head.")
                 self.model.top_layer = nn.Sequential(
                     nn.ReLU(inplace=True),
-                    nn.Linear(in_features=fd, out_features=self.k)
+                    nn.Linear(in_features=fd, out_features=self.k),
                 )
                 self.model.top_layer[-1].weight.data.normal_(0, 0.01)
                 self.model.top_layer[-1].bias.data.zero_()
@@ -540,7 +550,24 @@ class DeepCluster(BaseEstimator):
                 input.requires_grad = True
 
             # Forward pass
-            output = self.model(input)
+            if self.contrastive_strategy_1:
+                # Forward pass
+                if self.sobel:
+                    input = self.sobel(input)
+
+                features = self.model.features(input)
+
+                features = torch.flatten(features, 1)
+
+                features = self.model.classifier(features)
+                output = self.model.top_layer(features)
+                contrastive_loss = self.contrastive_criterion(features, target)
+
+                del features
+
+            else:
+                output = self.model(input)
+
             deep_clusster_loss = self.loss_criterion(output, target)
             accuracy_metric.update(output, target)
             # check Nan Loss
@@ -565,8 +592,6 @@ class DeepCluster(BaseEstimator):
                 true_labels.append(true.item())
 
             if self.contrastive_strategy_1:
-                contrastive_loss = self.calculate_contrastive_loss(input, target)
-
                 # add the contrastive loss to the contrastive losses tensor
                 contrastive_losses[i] = contrastive_loss.item()
                 loss = deep_clusster_loss + contrastive_loss
@@ -786,14 +811,8 @@ class DeepCluster(BaseEstimator):
 
     def calculate_contrastive_loss(self, input: Tensor, target: Tensor) -> Tensor:
         # Computing Features for Contrastive Loss
-        features = self.compute_features_for_batch(input)
 
         # calculate contrastive loss of features and pseudo labels
-        features = features.cpu()
-        target = target.cpu()
-        contrastive_loss = self.contrastive_criterion(features, target)
-
-        del features
 
         return contrastive_loss
 
@@ -827,20 +846,24 @@ class DeepCluster(BaseEstimator):
         np.ndarray: Predicted features.
         """
         self.model.eval()
-        
+
         # Activate compute features mode to exit forward function in advance
         self.model.compute_features = True
-        
+
         if self.metrics:
             end = time.time()
 
-        for i, (input, _) in tqdm(enumerate(data), desc="Computing Features", total=len(data),):
+        for i, (input, _) in tqdm(
+            enumerate(data),
+            desc="Computing Features",
+            total=len(data),
+        ):
 
             input = input.to(self.device)
 
             if self.requires_grad:
                 input.requires_grad = True
-                
+
             aux = self.model(input).data.cpu().numpy()
 
             if i == 0:
@@ -848,11 +871,11 @@ class DeepCluster(BaseEstimator):
 
             aux = aux.astype(np.float32)
             if i < len(data) - 1:
-                features[i * self.batch_size: (i + 1) * self.batch_size] = aux
+                features[i * self.batch_size : (i + 1) * self.batch_size] = aux
 
             else:
                 # Rest of the data
-                features[i * self.batch_size:] = aux
+                features[i * self.batch_size :] = aux
 
             # Free up GPU memory
             del input, aux
@@ -864,7 +887,7 @@ class DeepCluster(BaseEstimator):
 
         # Exit compute_feature mode
         self.model.compute_features = False
-        
+
         return features
 
     def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
@@ -970,7 +993,9 @@ class DeepCluster(BaseEstimator):
 
         return labels
 
-    def create_pseudo_labeled_dataset(self, dataset: data.Dataset, labels: list, transform: transforms) -> data.Dataset:
+    def create_pseudo_labeled_dataset(
+        self, dataset: data.Dataset, labels: list, transform: transforms
+    ) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
 
         Parameters
