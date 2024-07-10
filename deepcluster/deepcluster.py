@@ -781,29 +781,6 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
-    def calculate_contrastive_loss(self, input: Tensor, target: Tensor) -> Tensor:
-        # Computing Features for Contrastive Loss
-
-        # calculate contrastive loss of features and pseudo labels
-
-        return contrastive_loss
-
-    def calculate_nt_xent_loss(self, samples: Tensor) -> Tensor:
-        x1 = torch.stack(
-            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
-        )
-        x2 = torch.stack(
-            [self.augmentation_fn(transforms.ToPILImage()(img)) for img in samples]
-        )
-
-        x1_features = self.compute_features_for_batch(x1)
-        x2_features = self.compute_features_for_batch(x2)
-
-        # calculate contrastive loss of augmentations
-        loss = self.nt_xent_loss(x1_features, x2_features)
-
-        return loss
-
     @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
         """Computing the features based on the model prediction.
@@ -861,37 +838,6 @@ class DeepCluster(BaseEstimator):
         self.model.compute_features = False
 
         return features
-
-    def compute_features_for_batch(self, input: Tensor) -> np.ndarray:
-        """Computing the features based on the model prediction.
-
-        Parameter
-        ---------
-        data: data.DataLoader
-            Complete dataset.
-
-        Returns
-        -------
-        np.ndarray: Predicted features.
-        """
-        self.model.eval()
-
-        input = input.to(self.device)
-
-        if self.requires_grad:
-            input.requires_grad = True
-
-        aux = self.model(input).data
-
-        # if aux is numpy array convert it to torch tensor
-        if isinstance(aux, np.ndarray):
-            aux = torch.from_numpy(aux)
-
-        # Free up GPU memory
-        del input
-        torch.cuda.empty_cache()
-
-        return aux
 
     def pca_reduction(self, features: np.ndarray) -> np.ndarray:
         """Applies PCA reduction on the computed features and returns the transformed data.
