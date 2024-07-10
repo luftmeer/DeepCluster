@@ -12,7 +12,7 @@
   - green: Sobel filtering is active
 
 
-![image](/images/MNIST_Overview_AlexNet_VGG16_Sobel.png)
+![image](../images/MNIST_Overview_AlexNet_VGG16_Sobel.png)
 
 
 ### Commands for easy repetition
@@ -29,13 +29,34 @@ for i in {1..5}; do python3 main.py --arch AlexNet --input_dim 2 --sobel --num_c
 
 #### VGG16
 **Without Sobel**:
-[//]: # (adakit)
 ```bash
 for i in {1..5}; do python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
 ```
 
 **With Sobel**:
-[//]: # (charnockit)
 ```bash
 for i in {1..5}; do python3 main.py --arch VGG16 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch VGG16 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
+```
+
+#### ResNet18
+**Without Sobel**:
+```bash
+for i in {1..5}; do python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
+```
+
+**With Sobel**:
+```bash
+for i in {1..5}; do python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
+```
+
+
+#### FeedForward (Without PCA due to lower Feature Space)
+**Without Sobel**:
+```bash
+for i in {1..5}; do python3 main.py --arch FeedForward --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch FeedForward --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
+```
+
+**With Sobel**:
+```bash
+for i in {1..5}; do python3 main.py --arch FeedForward --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --clustering faiss --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; python3 main.py --arch FeedForward --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset MNIST --ds_train --batch_size 128 --reassign_optimizer_tl --clustering sklearn --metrics --metrics_dir ./metrics/MNIST/5_runs_100_epochs/ -v; done
 ```
