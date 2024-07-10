@@ -511,8 +511,6 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
-        print("Training Deep Cluster Refactored")
-
         # Set model to train mode
         self.model.train()
 
@@ -621,8 +619,6 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
-        print("Training Contrastive Strategy 1 Refactored")
-
         # Set model to train mode
         self.model.train()
 
@@ -727,8 +723,6 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the clustering loss for each batch.
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
-
-        print("Training Contrastive Strategy 2 Refactored")
 
         # Set model to train mode
         self.model.train()
