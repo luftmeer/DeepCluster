@@ -12,7 +12,7 @@
   - green: Sobel filtering is active
 
 
-![image](../images/CIFAR10_Overview_AlexNet_VGG16_Sobel.png)
+![image](../images/CIFAR10_Overview_AlexNet_VGG16_ResNet18_FeedForward_Sobel.png)
 
 
 #### AlexNet

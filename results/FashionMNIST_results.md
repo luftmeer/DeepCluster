@@ -12,7 +12,7 @@
   - green: Sobel filtering is active
 
 
-![image](../images/FashionMNIST_Overview_AlexNet_VGG16_Sobel.png)
+![image](../images/FashionMNIST_Overview_AlexNet_VGG16_ResNet18_FeedForward_Sobel.png)
 
 
 ### Commands for easy repetition

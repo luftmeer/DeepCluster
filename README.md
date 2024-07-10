@@ -71,6 +71,8 @@ For results on datasets, see:
 
 - [MNIST](/results/MNIST_results.md)
 - [CIFAR10](/results/CIFAR10_results.md)
+- [FashionMNIST](/results/FashionMNIST_results.md)
+- [GTSRB](/results/GTSRB_results.md)
 
 ---
 
