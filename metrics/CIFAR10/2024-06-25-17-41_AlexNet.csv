@@ -1,0 +1,2 @@
+epoch,loss_avg,accuracy,nmi_true_pred,nmi_epochs
+0,1.8370660132598877,0.35132,0.0,0.08527287686738874

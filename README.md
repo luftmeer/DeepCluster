@@ -69,8 +69,8 @@ Here is a figure of the process:
 
 For results on datasets, see:
 
-- [MNIST](/MNIST_results.md)
-- [CIFAR10](/CIFAR10_results.md)
+- [MNIST](/results/MNIST_results.md)
+- [CIFAR10](/results/CIFAR10_results.md)
 
 ---
 

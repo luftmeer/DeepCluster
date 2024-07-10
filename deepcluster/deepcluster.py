@@ -166,7 +166,6 @@ class DeepCluster(BaseEstimator):
         self.batch_size = batch_size
         self.k = k
         self.verbose = verbose
-        self.pca = pca_reduction
         self.cluster_assign_transform = cluster_assign_tf
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.reassign_clustering = reassign_clustering
@@ -252,7 +251,7 @@ class DeepCluster(BaseEstimator):
         self.best_model = 0.0
 
         if self.checkpoint and not self.checkpoint_file:
-            self.checkpoint = (
+            self.checkpoint_file = (
                 f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
             )
 
@@ -283,7 +282,9 @@ class DeepCluster(BaseEstimator):
             print(f"Saving the current checkpoint at epoch {epoch + 1}..")
 
         if best_model:
-            filename = f"{self.checkpoint}.best"  # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+            filename = f"{self.checkpoint_file}.best"  # This will allow to store a best model seperately even when the upcoming trainings result in a worse result
+        else:
+            filename = self.checkpoint_file
 
         torch.save(
             {
@@ -336,6 +337,7 @@ class DeepCluster(BaseEstimator):
 
         if self.metrics:
             end = time.time()
+            
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose:
@@ -344,20 +346,14 @@ class DeepCluster(BaseEstimator):
             # Remove head
             if self.remove_head:
                 self.model.top_layer = None
-                if self.verbose:
-                    print("Removed Top Layer head.")
-
-            # TODO: Cleanup
-            """if 'ResNet' not in str(self.model):
-                self.model.classifier = nn.Sequential(
-                    *list(self.model.classifier.children())[:-1]
-                )"""
+                if self.verbose: print('Removed Top Layer head.')
 
             # Compute Features
             features = self.compute_features(data)
 
             # PCA reduce features
-            features = self.pca_reduction(features)
+            if self.pca:
+                features = self.pca_reduction(features)
 
             # Cluster features and obtain the resulting labels
             labels = self.apply_clustering(features)
@@ -480,6 +476,7 @@ class DeepCluster(BaseEstimator):
             del pred_accuracy
             del losses
 
+    @torch.no_grad()
     def predict(self, batch: Tensor):
         """
         Makes predictions on the given data batch, based on the ConvNet (self.model) Output
@@ -488,9 +485,9 @@ class DeepCluster(BaseEstimator):
         :return: List of output neurons for each data point, which maximizes the class probability
         """
         self.model.eval()
-        with torch.no_grad():
-            predictions = self.model(batch)
-            pred_idx = [torch.argmax(pred) for pred in predictions]
+       
+        predictions = self.model(batch)
+        pred_idx = [torch.argmax(pred) for pred in predictions]
 
         return pred_idx
 
@@ -523,20 +520,7 @@ class DeepCluster(BaseEstimator):
         true_labels = []
 
         if self.reassign_optimizer_tl:
-            if str(self.optimizer_tl).split(" ")[0] == "SGD":
-                self.optimizer_tl = optim.SGD(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    momentum=self.optim_tl_momentum,
-                    weight_decay=self.optim_tl_weight_decay,
-                )
-            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-                self.optimizer_tl = optim.Adam(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                    weight_decay=self.optim_tl_weight_decay,
-                )
+            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
 
         if self.metrics:
             end = time.time()
@@ -670,21 +654,9 @@ class DeepCluster(BaseEstimator):
         predicted_labels = []
         true_labels = []
 
+        # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            if str(self.optimizer_tl).split(" ")[0] == "SGD":
-                self.optimizer_tl = optim.SGD(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    momentum=self.optim_tl_momentum,
-                    weight_decay=self.optim_tl_weight_decay,
-                )
-            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-                self.optimizer_tl = optim.Adam(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                    weight_decay=self.optim_tl_weight_decay,
-                )
+            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
 
         if self.metrics:
             end = time.time()
@@ -1009,6 +981,34 @@ class DeepCluster(BaseEstimator):
         """
         return PseudoLabeledData(labels, dataset, transform)
 
+    def reassign_optimizer(self, current_optimizer: optim.Optimizer, parameters: object) -> optim.Optimizer:
+        """Helper function to reassign a optimizer.
+        Supported for SGD and Adam optimizers.
+        
+        Parameters
+        ----------
+        current_optimizer: optim.Optimizer,
+            The currently used optimizer where the necessary information is extracted and to be "reset".
+            
+        Returns
+        -------
+        optim.Optimizer:
+            Reassigned and freshly created optimizer.
+        """
+        
+        if str(current_optimizer).split(" ")[0] == "SGD":
+            lr = current_optimizer.param_groups[0]["lr"]
+            momentum = current_optimizer.param_groups[0]["momentum"]
+            weight_decay = current_optimizer.param_groups[0]["weight_decay"]
+            
+            return optim.SGD(params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
+        elif str(current_optimizer).split(" ")[0] == "Adam":
+            lr = current_optimizer.param_groups[0]["lr"]
+            betas = current_optimizer.param_groups[0]["betas"]
+            weight_decay = current_optimizer.param_groups[0]["weight_decay"]
+            
+            return optim.Adam(params=parameters, lr=lr, betas=betas, weight_decay=weight_decay)
+    
     def print_results(
         self,
         epoch: int,
