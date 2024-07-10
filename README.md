@@ -81,23 +81,30 @@ The Model can simply be run by using the [main.py](/main.py) file in this root d
 > **_NOTE_**: Some of the inputs are not necessary and were strictly used for testing different values or approaches. Simply executing `python3 main.py`will result in a working run, as long a Nvidia GPU is present. If no GPU is present, use `python3 main.py --clustering sklearn` since the **faiss** clustering approach strictly needs a GPU present.
 
 ```text
-usage: python3 main.py [-h] [--arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}] [--input_dim INPUT_DIM] [--num_classes NUM_CLASSES] [--sobel] [--grayscale] [--requires_grad] [--epochs EPOCHS]
-                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB}] [--data_dir DATA_DIR] [--ds_train]
-                       [--ds_split {train,test,unlabeled,train+unlabeled,val}] [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR] [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1] [--beta2 BETA2]
-                       [--param_requires_grad] [--reassign_optimizer_tl] [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL] [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL] [--beta2_tl BETA2_TL]
-                       [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca] [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION] [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}] [--metrics]
-                       [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR] [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED] [--contrastive_strategy_1] [--contrastive_strategy_2] [--remove_head]
+usage: python3 main.py [-h]
+                       [--arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}]
+                       [--input_dim INPUT_DIM] [--num_classes NUM_CLASSES] [--sobel] [--grayscale]
+                       [--requires_grad] [--epochs EPOCHS]
+                       [--dataset {CIFAR10,MNIST,FashionMNIST,KMNIST,USPS,tinyimagenet,STL10,GTSRB}]
+                       [--data_dir DATA_DIR] [--ds_train]
+                       [--ds_split {train,test,unlabeled,train+unlabeled,val}]
+                       [--batch_size BATCH_SIZE] [--optimizer {SGD,Adam}] [--lr LR]
+                       [--momentum MOMENTUM] [--weight_decay WEIGHT_DECAY] [--beta1 BETA1]
+                       [--beta2 BETA2] [--param_requires_grad] [--reassign_optimizer_tl]
+                       [--optimizer_tl {SGD,Adam}] [--lr_tl LR_TL] [--momentum_tl MOMENTUM_TL]
+                       [--weight_decay_tl WEIGHT_DECAY_TL] [--beta1_tl BETA1_TL]
+                       [--beta2_tl BETA2_TL] [--loss_fn {L1,L2,MSE,CrossEntropy}] [--pca]
+                       [--pca_method {sklearn,faiss}] [--pca_reduction PCA_REDUCTION]
+                       [--pca_whitening] [--reassign_clustering] [--clustering {sklearn,faiss}]
+                       [--metrics] [--metrics_file METRICS_FILE] [--metrics_dir METRICS_DIR]
+                       [--checkpoint] [--checkpoint_file CHECKPOINT_FILE] [--verbose] [--seed SEED]
+                       [--contrastive_strategy_1] [--contrastive_strategy_2] [--remove_head]
+                       [--augmentation_resize AUGMENTATION_RESIZE]
+                       [--augmentation_random_crop AUGMENTATION_RANDOM_CROP]
+                       [--augmentation_random_rotation AUGMENTATION_RANDOM_ROTATION]
+                       [--augmentation_random_horizontal_flip] [--augmentation_random_vertical_flip]
 
-PyTorch Implementation of DeepCluster with added Contrastive Learning features
-
-options:
-  -h, --help            show this help message and exit
-  --arch {FeedForward,AlexNet,VGG16,ResNet18,ResNet34,ResNet50,ResNet101,ResNet152}
-                        CNN architecture (default: AlexNet)
-  --input_dim INPUT_DIM
-                        Input Dimension for the CNN architecture (default: 1)
-                         - 3 for colored images
-                         - 2 for images with sobel filtering (and grayscale when original inputs are colored images)
+lored images)
                          - 1 for b/w images
   --num_classes NUM_CLASSES
                         The amount of classes are to be discovered and clustered by the CNN and k-Means algorithm. (default: 10)
@@ -144,9 +151,7 @@ options:
   --beta1_tl BETA1_TL   Beta1 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.9)
   --beta2_tl BETA2_TL   Beta2 value for the top layer Optimizer and only used for the Adam optimizer. (default: 0.999)
   --loss_fn {L1,L2,MSE,CrossEntropy}
-                        Loss function for when training the model. (default: CrossEntropy)
-  --pca                 When set, DeepCluster will perform a PCA reduction on the computed features.
-  --pca_method {sklearn,faiss}
+
                         The preferred PCA implementation. (default: faiss)
   --pca_reduction PCA_REDUCTION
                         Up to how many components the features are reduced. (default: 256)
@@ -168,6 +173,22 @@ options:
   --contrastive_strategy_1
                         When active, the first contrastive strategy is used. The image is feed into the DeepCluster framework. Together with the resulting pseudo labels the features are fed into a contrastive head, that calculates the contrastive loss. The sum of the DeepCluster Loss and the Contrastive Loss will be the final loss. (default: False)
   --contrastive_strategy_2
-                        When active, the second contrastive strategy is used. The input image is augmented into two different verions of the origin. Both augmented images are feed into the DeepCluster framework. both representations are used to calculate the NTXentLoss. The final loss will be the sum of both DeepCluster losses and the NTXent Loss. (default: False)
+                        When active, the second contrastive strategy is used. The input image is augmented into two different verions of the origin. Both augme nted images are feed into the DeepCluster framework. both representations are used to calculate the NTXentLoss. The final loss will be the sum of both DeepCluster losses and the NTXent Loss. (default: False)
   --remove_head         When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.
+  --augmentation_resize AUGMENTATION_RESIZE
+                        Resize the input images to the given size.
+  --augmentation_random_crop AUGMENTATION_RANDOM_CROP
+                        Randomly crop the input images to the given size.
+  --augmentation_random_rotation AUGMENTATION_RANDOM_ROTATION
+                        Randomly rotate the input images to a random degree. between the given integer and the negative of the given integer.
+  --augmentation_random_horizontal_flip
+                        Randomly flip the input images horizontally.
+  --augmentation_random_vertical_flip
+                        Randomly flip the input images vertically.
+  --augmentation_color_jitter
+                        Randomly change the brightness, contrast and saturation of the input images.
+  --augmentation_random_autocontrast
+                        Randomly apply autocontrast to the input images.
+  --augmentation_random_equalize
+                        Randomly apply equalize to the input images.
 ```
