@@ -649,42 +649,6 @@ class DeepCluster(BaseEstimator):
                 weight_decay=self.optim_tl_weight_decay,
             )
 
-    def compute_features_and_output(
-        self, input: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Computes the features and output of the model for a given input.
-        Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
-
-        Args:
-            input (torch.Tensor): The input data for the model.
-
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: The features extracted by the model.
-                - torch.Tensor: The output of the model's top layer.
-
-        The function performs the following steps:
-            1. Applies the Sobel filter to the input if specified.
-            2. Computes the features using the model's feature extractor.
-            3. Flattens the features.
-            4. Passes the features through the model's classifier.
-            5. Computes the output of the model's top layer.
-            6. Returns the features and the output.
-        """
-
-        if self.sobel:
-            input = self.sobel(input)
-
-        features = self.model.features(input)
-
-        features = torch.flatten(features, 1)
-
-        features = self.model.classifier(features)
-        output = self.model.top_layer(features)
-
-        return features, output
-
     def train_contrastive_strategy_1(self, train_data: data.DataLoader) -> tuple:
         """
         Trains the model using a combined contrastive and clustering loss strategy.
@@ -945,6 +909,42 @@ class DeepCluster(BaseEstimator):
             deep_clusster_losses,
             contrastive_losses,
         )
+
+    def compute_features_and_output(
+        self, input: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes the features and output of the model for a given input.
+        Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
+
+        Args:
+            input (torch.Tensor): The input data for the model.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: The features extracted by the model.
+                - torch.Tensor: The output of the model's top layer.
+
+        The function performs the following steps:
+            1. Applies the Sobel filter to the input if specified.
+            2. Computes the features using the model's feature extractor.
+            3. Flattens the features.
+            4. Passes the features through the model's classifier.
+            5. Computes the output of the model's top layer.
+            6. Returns the features and the output.
+        """
+
+        if self.sobel:
+            input = self.sobel(input)
+
+        features = self.model.features(input)
+
+        features = torch.flatten(features, 1)
+
+        features = self.model.classifier(features)
+        output = self.model.top_layer(features)
+
+        return features, output
 
     @torch.no_grad()
     def compute_features(self, data: data.DataLoader) -> np.ndarray:
