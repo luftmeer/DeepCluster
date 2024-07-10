@@ -341,6 +341,57 @@ def parse_args():
         help="When active, the top layer head (final classifier) will be rmeoved and later reattached, as it is done by the original implementation.",
     )
 
+    parser.add_argument(
+        "--augmentation_resize",
+        type=int,
+        default=None,
+        help="Resize the input images to the given size.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_crop",
+        type=int,
+        default=None,
+        help="Randomly crop the input images to the given size.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_rotation",
+        type=int,
+        default=None,
+        help="Randomly rotate the input images to a random degree. between the given integer and the negative of the given integer.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_horizontal_flip",
+        action="store_true",
+        help="Randomly flip the input images horizontally.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_vertical_flip",
+        action="store_true",
+        help="Randomly flip the input images vertically.",
+    )
+
+    parser.add_argument(
+        "--augmentation_color_jitter",
+        action="store_true",
+        help="Randomly change the brightness, contrast and saturation of the input images.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_autocontrast",
+        action="store_true",
+        help="Randomly apply autocontrast to the input images.",
+    )
+
+    parser.add_argument(
+        "--augmentation_random_equalize",
+        action="store_true",
+        help="Randomly apply equalize to the input images.",
+    )
+
     return parser.parse_args()
 
 
@@ -464,13 +515,39 @@ def main(args):
             betas=(args.beta1_tl, args.beta2_tl),
         )
 
+    augmentations = []
+
+    if args.augmentation_resize is not None:
+        augmentations.append(transforms.Resize(args.augmentation_resize))
+
+    if args.augmentation_random_crop is not None:
+        augmentations.append(transforms.RandomCrop(args.augmentation_random_crop))
+
+    if args.augmentation_random_rotation is not None:
+        augmentations.append(
+            transforms.RandomRotation(args.augmentation_random_rotation)
+        )
+
+    if args.augmentation_random_horizontal_flip:
+        augmentations.append(transforms.RandomHorizontalFlip())
+
+    if args.augmentation_random_vertical_flip:
+        augmentations.append(transforms.RandomVerticalFlip())
+
+    if args.augmentation_color_jitter:
+        augmentations.append(
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1)
+        )
+
+    if args.augmentation_random_autocontrast:
+        augmentations.append(transforms.RandomAutocontrast())
+
+    if args.augmentation_random_equalize:
+        augmentations.append(transforms.RandomEqualize())
+
     augmentation_fn = transforms.Compose(
         [
-            transforms.Resize(230),
-            transforms.RandomCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(10),
-            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+            *augmentations,
             transforms.ToTensor(),
         ]
     )
