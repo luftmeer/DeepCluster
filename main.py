@@ -463,6 +463,18 @@ def main(args):
             weight_decay=args.weight_decay_tl,
             betas=(args.beta1_tl, args.beta2_tl),
         )
+
+    augmentation_fn = transforms.Compose(
+        [
+            transforms.Resize(230),
+            transforms.RandomCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(10),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+            transforms.ToTensor(),
+        ]
+    )
+
     print("Created top layer Optimizer...")
 
     # Loss Function
@@ -509,6 +521,7 @@ def main(args):
         contrastive_strategy_1=args.contrastive_strategy_1,
         contrastive_strategy_2=args.contrastive_strategy_2,
         remove_head=args.remove_head,
+        augmentation_fn=augmentation_fn if args.contrastive_strategy_2 else None,
     )
 
     print("Running model...")

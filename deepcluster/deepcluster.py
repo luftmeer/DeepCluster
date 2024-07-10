@@ -93,6 +93,7 @@ class DeepCluster(BaseEstimator):
         contrastive_strategy_1: bool = False,
         contrastive_strategy_2: bool = False,
         remove_head: bool = False,
+        augmentation_fn: transforms = None,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
 
@@ -192,16 +193,7 @@ class DeepCluster(BaseEstimator):
         # was used in SimCLR and MoCo
         self.nt_xent_loss = SelfSupervisedLoss(NTXentLoss(temperature=0.5))
 
-        self.augmentation_fn = transforms.Compose(
-            [
-                transforms.Resize(230),
-                transforms.RandomCrop(224),
-                transforms.RandomHorizontalFlip(),  # Remove for MNIST
-                transforms.RandomRotation(10),
-                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
-                transforms.ToTensor(),
-            ]
-        )
+        self.augmentation_fn = augmentation_fn
 
         # flags for different contrastive strategies
         self.contrastive_strategy_1 = contrastive_strategy_1
@@ -519,7 +511,7 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
-        print("Training Deep Cluster")
+        print("Training Deep Cluster Refactored")
 
         # Set model to train mode
         self.model.train()
@@ -626,7 +618,7 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
-        print("Training Contrastive Strategy 1")
+        print("Training Contrastive Strategy 1 Refactored")
 
         # Set model to train mode
         self.model.train()
@@ -732,6 +724,9 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the clustering loss for each batch.
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
+
+        print("Training Contrastive Strategy 2 Refactored")
+
         # Set model to train mode
         self.model.train()
 
@@ -854,7 +849,7 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
-    def get_initial_logs(self, train_data: data.DataLoader):
+    def get_initial_logs(self, train_data: data.DataLoader) -> tuple:
         """
         Initializes and returns logging structures for tracking training metrics.
 
@@ -900,7 +895,7 @@ class DeepCluster(BaseEstimator):
             true_labels,
         )
 
-    def do_backward_pass(self, loss: torch.Tensor):
+    def do_backward_pass(self, loss: torch.Tensor) -> None:
         """
         Performs the backward pass and updates model weights based on the given loss.
 
@@ -957,9 +952,7 @@ class DeepCluster(BaseEstimator):
                 weight_decay=self.optim_tl_weight_decay,
             )
 
-    def compute_features_and_output(
-        self, input: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def compute_features_and_output(self, input: torch.Tensor) -> tuple:
         """
         Computes the features and output of the model for a given input.
         Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
