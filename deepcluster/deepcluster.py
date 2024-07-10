@@ -337,7 +337,7 @@ class DeepCluster(BaseEstimator):
 
         if self.metrics:
             end = time.time()
-            
+
         for epoch in range(self.start_epoch, self.epochs):
             start_time = time.time()
             if self.verbose:
@@ -346,7 +346,8 @@ class DeepCluster(BaseEstimator):
             # Remove head
             if self.remove_head:
                 self.model.top_layer = None
-                if self.verbose: print('Removed Top Layer head.')
+                if self.verbose:
+                    print("Removed Top Layer head.")
 
             # Compute Features
             features = self.compute_features(data)
@@ -495,7 +496,7 @@ class DeepCluster(BaseEstimator):
         :return: List of output neurons for each data point, which maximizes the class probability
         """
         self.model.eval()
-       
+
         predictions = self.model(batch)
         pred_idx = [torch.argmax(pred) for pred in predictions]
 
@@ -517,6 +518,9 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the clustering loss for each batch.
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
+
+        print("Training Deep Cluster")
+
         # Set model to train mode
         self.model.train()
 
@@ -534,20 +538,7 @@ class DeepCluster(BaseEstimator):
         true_labels = []
 
         if self.reassign_optimizer_tl:
-            if str(self.optimizer_tl).split(" ")[0] == "SGD":
-                self.optimizer_tl = optim.SGD(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    momentum=self.optim_tl_momentum,
-                    weight_decay=self.optim_tl_weight_decay,
-                )
-            elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-                self.optimizer_tl = optim.Adam(
-                    self.model.top_layer.parameters(),
-                    lr=self.optim_tl_lr,
-                    betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                    weight_decay=self.optim_tl_weight_decay,
-                )
+            self.reassign_top_layer_optimizer()
 
         if self.metrics:
             end = time.time()
@@ -575,9 +566,6 @@ class DeepCluster(BaseEstimator):
 
             # add the deep cluster loss to the deep cluster losses tensor
             deep_clusster_losses[i] = deep_clusster_loss.item()
-
-            # calculate accuracy and add it to accuracies tensor
-            _, predicted = output.max(1)
 
             for tar in target:
                 predicted_labels.append(tar.item())
@@ -628,6 +616,75 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
+    def reassign_top_layer_optimizer(self):
+        """
+        Reassigns the optimizer for the top layer of the model based on the specified optimizer type.
+
+        The function checks the current optimizer type for the top layer and reinitializes it with
+        the appropriate parameters.
+
+        If the optimizer type is:
+            - "SGD": Initializes an SGD optimizer with specified learning rate, momentum, and weight decay.
+            - "Adam": Initializes an Adam optimizer with specified learning rate, beta values, and weight decay.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+
+        if str(self.optimizer_tl).split(" ")[0] == "SGD":
+            self.optimizer_tl = optim.SGD(
+                self.model.top_layer.parameters(),
+                lr=self.optim_tl_lr,
+                momentum=self.optim_tl_momentum,
+                weight_decay=self.optim_tl_weight_decay,
+            )
+        elif str(self.optimizer_tl).split(" ")[0] == "Adam":
+            self.optimizer_tl = optim.Adam(
+                self.model.top_layer.parameters(),
+                lr=self.optim_tl_lr,
+                betas=(self.optim_tl_beta1, self.optim_tl_beta2),
+                weight_decay=self.optim_tl_weight_decay,
+            )
+
+    def compute_features_and_output(
+        self, input: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes the features and output of the model for a given input.
+        Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
+
+        Args:
+            input (torch.Tensor): The input data for the model.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: The features extracted by the model.
+                - torch.Tensor: The output of the model's top layer.
+
+        The function performs the following steps:
+            1. Applies the Sobel filter to the input if specified.
+            2. Computes the features using the model's feature extractor.
+            3. Flattens the features.
+            4. Passes the features through the model's classifier.
+            5. Computes the output of the model's top layer.
+            6. Returns the features and the output.
+        """
+
+        if self.sobel:
+            input = self.sobel(input)
+
+        features = self.model.features(input)
+
+        features = torch.flatten(features, 1)
+
+        features = self.model.classifier(features)
+        output = self.model.top_layer(features)
+
+        return features, output
+
     def train_contrastive_strategy_1(self, train_data: data.DataLoader) -> tuple:
         """
         Trains the model using a combined contrastive and clustering loss strategy.
@@ -645,6 +702,9 @@ class DeepCluster(BaseEstimator):
                 - torch.Tensor: Losses from the clustering loss for each batch.
                 - torch.Tensor: Losses from the contrastive loss for each batch.
         """
+
+        print("Training Contrastive Strategy 1")
+
         # Set model to train mode
         self.model.train()
 
@@ -662,7 +722,9 @@ class DeepCluster(BaseEstimator):
         true_labels = []
 
         if self.reassign_optimizer_tl:
-            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
 
         if self.metrics:
             end = time.time()
@@ -675,16 +737,7 @@ class DeepCluster(BaseEstimator):
             if self.requires_grad:
                 input.requires_grad = True
 
-            # Forward pass
-            if self.sobel:
-                input = self.sobel(input)
-
-            features = self.model.features(input)
-
-            features = torch.flatten(features, 1)
-
-            features = self.model.classifier(features)
-            output = self.model.top_layer(features)
+            features, output = self.compute_features_and_output(input)
             contrastive_loss = self.contrastive_criterion(features, target)
 
             deep_clusster_loss = self.loss_criterion(output, target)
@@ -700,9 +753,6 @@ class DeepCluster(BaseEstimator):
 
             # add the deep cluster loss to the deep cluster losses tensor
             deep_clusster_losses[i] = deep_clusster_loss.item()
-
-            # calculate accuracy and add it to accuracies tensor
-            _, predicted = output.max(1)
 
             for tar in target:
                 predicted_labels.append(tar.item())
@@ -785,7 +835,9 @@ class DeepCluster(BaseEstimator):
 
         # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            self.optimizer_tl = self.reassign_optimizer(self.optimizer_tl, self.model.top_layer.parameters())
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
 
         if self.metrics:
             end = time.time()
@@ -809,22 +861,8 @@ class DeepCluster(BaseEstimator):
                 target.to(self.device),
             )
 
-            # Forward pass
-            if self.sobel:
-                input_1 = self.sobel(input_1)
-                input_2 = self.sobel(input_2)
-
-            features_1 = self.model.features(input_1)
-            features_2 = self.model.features(input_2)
-
-            features_1 = torch.flatten(features_1, 1)
-            features_2 = torch.flatten(features_2, 1)
-
-            features_1 = self.model.classifier(features_1)
-            features_2 = self.model.classifier(features_2)
-
-            output_1 = self.model.top_layer(features_1)
-            output_2 = self.model.top_layer(features_2)
+            features_1, output_1 = self.compute_features_and_output(input_1)
+            features_2, output_2 = self.compute_features_and_output(input_2)
 
             deep_clusster_loss_1 = self.loss_criterion(output_1, target)
             deep_clusster_loss_2 = self.loss_criterion(output_2, target)
@@ -857,9 +895,7 @@ class DeepCluster(BaseEstimator):
             for true in true_target:
                 true_labels.append(true.item())
 
-            contrastive_loss = self.nt_xent_loss(
-                features_1, features_2
-            )  # here we can also try with labels
+            contrastive_loss = self.nt_xent_loss(features_1, features_2)
 
             # add the contrastive loss to the contrastive losses tensor
             contrastive_losses[i] = contrastive_loss.item()
@@ -1056,34 +1092,40 @@ class DeepCluster(BaseEstimator):
         """
         return PseudoLabeledData(labels, dataset, transform)
 
-    def reassign_optimizer(self, current_optimizer: optim.Optimizer, parameters: object) -> optim.Optimizer:
+    def reassign_optimizer(
+        self, current_optimizer: optim.Optimizer, parameters: object
+    ) -> optim.Optimizer:
         """Helper function to reassign a optimizer.
         Supported for SGD and Adam optimizers.
-        
+
         Parameters
         ----------
         current_optimizer: optim.Optimizer,
             The currently used optimizer where the necessary information is extracted and to be "reset".
-            
+
         Returns
         -------
         optim.Optimizer:
             Reassigned and freshly created optimizer.
         """
-        
+
         if str(current_optimizer).split(" ")[0] == "SGD":
             lr = current_optimizer.param_groups[0]["lr"]
             momentum = current_optimizer.param_groups[0]["momentum"]
             weight_decay = current_optimizer.param_groups[0]["weight_decay"]
-            
-            return optim.SGD(params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
+
+            return optim.SGD(
+                params=parameters, lr=lr, momentum=momentum, weight_decay=weight_decay
+            )
         elif str(current_optimizer).split(" ")[0] == "Adam":
             lr = current_optimizer.param_groups[0]["lr"]
             betas = current_optimizer.param_groups[0]["betas"]
             weight_decay = current_optimizer.param_groups[0]["weight_decay"]
-            
-            return optim.Adam(params=parameters, lr=lr, betas=betas, weight_decay=weight_decay)
-    
+
+            return optim.Adam(
+                params=parameters, lr=lr, betas=betas, weight_decay=weight_decay
+            )
+
     def print_results(
         self,
         epoch: int,
