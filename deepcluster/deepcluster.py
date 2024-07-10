@@ -733,11 +733,15 @@ class DeepCluster(BaseEstimator):
         (
             losses,
             contrastive_losses,
-            deep_clusster_losses,
+            _,
             accuracy_metric,
             predicted_labels,
             true_labels,
         ) = self.get_initial_logs(train_data)
+
+        deep_clusster_losses = torch.zeros(
+            2 * len(train_data), dtype=torch.float32, requires_grad=False
+        )
 
         # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
