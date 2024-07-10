@@ -524,18 +524,14 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = MulticlassAccuracy()
-
-        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        contrastive_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-        deep_clusster_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-
-        predicted_labels = []
-        true_labels = []
+        (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
 
         if self.reassign_optimizer_tl:
             self.reassign_top_layer_optimizer()
@@ -579,11 +575,7 @@ class DeepCluster(BaseEstimator):
             losses[i] = loss.item()
 
             # Backward pass and optimize
-            self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer_tl.step()
+            self.do_backward_pass(loss)
 
             # Free up GPU memory
             del (
@@ -616,39 +608,6 @@ class DeepCluster(BaseEstimator):
             contrastive_losses,
         )
 
-    def reassign_top_layer_optimizer(self):
-        """
-        Reassigns the optimizer for the top layer of the model based on the specified optimizer type.
-
-        The function checks the current optimizer type for the top layer and reinitializes it with
-        the appropriate parameters.
-
-        If the optimizer type is:
-            - "SGD": Initializes an SGD optimizer with specified learning rate, momentum, and weight decay.
-            - "Adam": Initializes an Adam optimizer with specified learning rate, beta values, and weight decay.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-
-        if str(self.optimizer_tl).split(" ")[0] == "SGD":
-            self.optimizer_tl = optim.SGD(
-                self.model.top_layer.parameters(),
-                lr=self.optim_tl_lr,
-                momentum=self.optim_tl_momentum,
-                weight_decay=self.optim_tl_weight_decay,
-            )
-        elif str(self.optimizer_tl).split(" ")[0] == "Adam":
-            self.optimizer_tl = optim.Adam(
-                self.model.top_layer.parameters(),
-                lr=self.optim_tl_lr,
-                betas=(self.optim_tl_beta1, self.optim_tl_beta2),
-                weight_decay=self.optim_tl_weight_decay,
-            )
-
     def train_contrastive_strategy_1(self, train_data: data.DataLoader) -> tuple:
         """
         Trains the model using a combined contrastive and clustering loss strategy.
@@ -672,18 +631,14 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = MulticlassAccuracy()
-
-        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        contrastive_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-        deep_clusster_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-
-        predicted_labels = []
-        true_labels = []
+        (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
 
         if self.reassign_optimizer_tl:
             self.optimizer_tl = self.reassign_optimizer(
@@ -732,11 +687,7 @@ class DeepCluster(BaseEstimator):
             losses[i] = loss.item()
 
             # Backward pass and optimize
-            self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer_tl.step()
+            self.do_backward_pass(loss)
 
             # Free up GPU memory
             del (input, target, output, loss, features, contrastive_loss)
@@ -784,18 +735,14 @@ class DeepCluster(BaseEstimator):
         # Set model to train mode
         self.model.train()
 
-        accuracy_metric = MulticlassAccuracy()
-
-        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
-        contrastive_losses = torch.zeros(
-            len(train_data), dtype=torch.float32, requires_grad=False
-        )
-        deep_clusster_losses = torch.zeros(
-            len(train_data) * 2, dtype=torch.float32, requires_grad=False
-        )
-
-        predicted_labels = []
-        true_labels = []
+        (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        ) = self.get_initial_logs(train_data)
 
         # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
@@ -833,6 +780,7 @@ class DeepCluster(BaseEstimator):
 
             accuracy_metric.update(output_1, target)
             accuracy_metric.update(output_2, target)
+
             # check Nan Loss
             if torch.isnan(deep_clusster_loss_1):
                 print("targets", target)
@@ -869,11 +817,7 @@ class DeepCluster(BaseEstimator):
             losses[i] = loss.item()
 
             # Backward pass and optimize
-            self.optimizer.zero_grad()
-            self.optimizer_tl.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer_tl.step()
+            self.do_backward_pass(loss)
 
             # Free up GPU memory
             del (
@@ -909,6 +853,109 @@ class DeepCluster(BaseEstimator):
             deep_clusster_losses,
             contrastive_losses,
         )
+
+    def get_initial_logs(self, train_data: data.DataLoader):
+        """
+        Initializes and returns logging structures for tracking training metrics.
+
+        Args:
+            train_data (data.DataLoader): DataLoader containing the training data.
+
+        Returns:
+            tuple: A tuple containing:
+                - torch.Tensor: Tensor initialized to track the total losses for each batch.
+                - torch.Tensor: Tensor initialized to track the contrastive losses for each batch.
+                - torch.Tensor: Tensor initialized to track the deep cluster losses for each batch.
+                - MulticlassAccuracy: Metric object for tracking accuracy.
+                - list: List for storing predicted labels.
+                - list: List for storing true labels.
+
+        The function initializes tensors and lists for logging the following metrics:
+            - Total losses per batch.
+            - Contrastive losses per batch.
+            - Deep cluster losses per batch.
+            - Predicted labels for accuracy computation.
+            - True labels for accuracy computation.
+        """
+
+        accuracy_metric = MulticlassAccuracy()
+
+        losses = torch.zeros(len(train_data), dtype=torch.float32, requires_grad=False)
+        contrastive_losses = torch.zeros(
+            len(train_data), dtype=torch.float32, requires_grad=False
+        )
+        deep_clusster_losses = torch.zeros(
+            len(train_data), dtype=torch.float32, requires_grad=False
+        )
+
+        predicted_labels = []
+        true_labels = []
+
+        return (
+            losses,
+            contrastive_losses,
+            deep_clusster_losses,
+            accuracy_metric,
+            predicted_labels,
+            true_labels,
+        )
+
+    def do_backward_pass(self, loss: torch.Tensor):
+        """
+        Performs the backward pass and updates model weights based on the given loss.
+
+        Args:
+            loss (torch.Tensor): The computed loss for which gradients will be calculated.
+
+        Returns:
+            None
+
+        The function performs the following steps:
+            1. Resets the gradients of the model's parameters.
+            2. Resets the gradients of the top layer's parameters.
+            3. Computes the gradients by backpropagating the loss.
+            4. Updates the model's parameters using the optimizer.
+            5. Updates the top layer's parameters using the top layer optimizer.
+        """
+
+        self.optimizer.zero_grad()
+        self.optimizer_tl.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        self.optimizer_tl.step()
+
+    def reassign_top_layer_optimizer(self):
+        """
+        Reassigns the optimizer for the top layer of the model based on the specified optimizer type.
+
+        The function checks the current optimizer type for the top layer and reinitializes it with
+        the appropriate parameters.
+
+        If the optimizer type is:
+            - "SGD": Initializes an SGD optimizer with specified learning rate, momentum, and weight decay.
+            - "Adam": Initializes an Adam optimizer with specified learning rate, beta values, and weight decay.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+
+        if str(self.optimizer_tl).split(" ")[0] == "SGD":
+            self.optimizer_tl = optim.SGD(
+                self.model.top_layer.parameters(),
+                lr=self.optim_tl_lr,
+                momentum=self.optim_tl_momentum,
+                weight_decay=self.optim_tl_weight_decay,
+            )
+        elif str(self.optimizer_tl).split(" ")[0] == "Adam":
+            self.optimizer_tl = optim.Adam(
+                self.model.top_layer.parameters(),
+                lr=self.optim_tl_lr,
+                betas=(self.optim_tl_beta1, self.optim_tl_beta2),
+                weight_decay=self.optim_tl_weight_decay,
+            )
 
     def compute_features_and_output(
         self, input: torch.Tensor
