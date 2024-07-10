@@ -8,12 +8,12 @@ import torch
 from torchvision import transforms
 
 from deepcluster.deepcluster import DeepCluster
+from deepcluster.models.AlexNet import AlexNet
 
 # CNN Models
 from deepcluster.models.FeedForward import FeedForward
-from deepcluster.models.AlexNet import AlexNet
-from deepcluster.models.VGG import VGG16
 from deepcluster.models.ResNet import resnet18, resnet34, resnet50, resnet101, resnet152
+from deepcluster.models.VGG import VGG16
 
 # Utils
 from deepcluster.utils import datasets, loss_functions, optimizer
@@ -29,20 +29,33 @@ def parse_args():
     )
 
     # CNN Model Arguments
-    parser.add_argument("--arch",
-                        type=str,
-                        choices=["FeedForward", "AlexNet", "VGG16", "ResNet18", "ResNet34", "ResNet50", "ResNet101",
-                                 "ResNet152"],
-                        default="AlexNet",
-                        help="CNN architecture (default: AlexNet)"
-                        )
-    parser.add_argument("--input_dim",
-                        type=int, default=1, help=textwrap.dedent('''\
+    parser.add_argument(
+        "--arch",
+        type=str,
+        choices=[
+            "FeedForward",
+            "AlexNet",
+            "VGG16",
+            "ResNet18",
+            "ResNet34",
+            "ResNet50",
+            "ResNet101",
+            "ResNet152",
+        ],
+        default="AlexNet",
+        help="CNN architecture (default: AlexNet)",
+    )
+    parser.add_argument(
+        "--input_dim",
+        type=int,
+        default=1,
+        help=textwrap.dedent(
+            """\
         Input Dimension for the CNN architecture (default: 1)
          - 3 for colored images
          - 2 for images with sobel filtering (and grayscale when original inputs are colored images)
          - 1 for b/w images
-        '''
+        """
         ),
     )
     parser.add_argument(
@@ -120,7 +133,6 @@ def parse_args():
              - tinyimagenet (train, val, test)
              - STL10 (train, test, unlabeled, train+unlabeled)
              - GTSRB (train, test)
-             - Imagenette (train, val)
             """
         ),
     )
@@ -516,7 +528,3 @@ def print_selection(args):
 if __name__ == "__main__":
     args = parse_args()
     main(args)
-
-# python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./metrics_file.csv" --verbose
-
-# python3 main.py --num_classes 10 --epochs 3 --dataset CIFAR10 --metrics --metrics_file "./contrastive_strategy_2_metrics_file.csv" --verbose --contrastive_strategy_2
