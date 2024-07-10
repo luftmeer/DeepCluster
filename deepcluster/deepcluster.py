@@ -525,8 +525,11 @@ class DeepCluster(BaseEstimator):
             true_labels,
         ) = self.get_initial_logs(train_data)
 
+        # Reassign Top Layer Optimizer when active (and as intended in original implementation)
         if self.reassign_optimizer_tl:
-            self.reassign_top_layer_optimizer()
+            self.optimizer_tl = self.reassign_optimizer(
+                self.optimizer_tl, self.model.top_layer.parameters()
+            )
 
         if self.metrics:
             end = time.time()
