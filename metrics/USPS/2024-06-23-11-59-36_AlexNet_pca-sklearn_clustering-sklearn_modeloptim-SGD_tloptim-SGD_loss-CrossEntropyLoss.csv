@@ -1,0 +1,7 @@
+#Namespace(arch='AlexNet', input_dim=2, num_classes=10, sobel=True, grayscale=False, requires_grad=False, epochs=5, dataset='USPS', data_dir='./data', batch_size=128, optimizer='SGD', lr=0.05, momentum=0.9, weight_decay=1e-05, beta1=0.9, beta2=0.999, param_requires_grad=False, reassign_optimizer_tl=False, optimizer_tl='SGD', lr_tl=0.05, momentum_tl=0.9, weight_decay_tl=1e-05, beta1_tl=0.9, beta2_tl=0.999, loss_fn='CrossEntropy', pca=False, pca_method='sklearn', pca_reduction=256, pca_whitening=True, reassign_clustering=False, clustering='sklearn', metrics=True, metrics_file=None, checkpoint=None, verbose=False, seed=42)
+epoch,loss_avg,accuracy,true_accuracy,nmi_true_ped,nmi_epochs,epoch_time,train_time,features_time,cluster_time,pca_time
+0,1.5915724,0.43752572,0.0864079,0.6729850174730062,0.0,207.92340397834778,154.17892122268677,52.41601204872131,1.3021581172943115,0
+1,1.5017207,0.4446578,0.07529831,0.38065010704458346,0.428202417119769,205.93855619430542,150.26842308044434,53.07872748374939,1.0714409351348877,0
+2,1.6555984,0.34124264,0.09847757,0.08771726440695513,0.3500707141549418,209.39563965797424,152.89213705062866,53.983365297317505,1.556143045425415,0
+3,1.583127,0.3849952,0.08421341,0.1287118830187686,0.38717117785656896,208.61745190620422,153.9552435874939,52.92756652832031,1.170781135559082,0
+4,1.7576183,0.32450968,0.10368948,0.3005027521415686,0.17167037462206675,209.6401391029358,155.0719394683838,52.4587938785553,1.5537598133087158,0
