@@ -1,4 +1,4 @@
-### CIFAR10
+## CIFAR10
 - Tested with faiss and scikit-learn library for both PCA and k-Means clustering with each possible combination
 - Plots:
     1. Average loss for each epoch
@@ -88,4 +88,14 @@ for i in {1..5}; do python3 main.py --arch FeedForward --input_dim 2 --grayscale
 **Adjusted class size**
 ```bash
 for i in 20 50 100; do python3 main.py --arch FeedForward --input_dim 3 --num_classes $i --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch FeedForward --input_dim 3 --num_classes $i --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch FeedForward --input_dim 2 --num_classes $i --grayscale --sobel --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch FeedForward --input_dim 2 --num_classes $i --grayscale --sobel --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --remove_head; done
+```
+
+
+---
+
+## Contrastive Strategies
+
+### Strategy 1
+```bash (enderbit)
+python3 main.py --arch AlexNet --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch AlexNet --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch VGG16 --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch VGG16 --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 32 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch ResNet18 --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch ResNet18 --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch FeedForward --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering faiss --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1; python3 main.py --arch FeedForward --input_dim 3 --num_classes 10 --epochs 25 --requires_grad --dataset CIFAR10 --ds_train --batch_size 128 --reassign_optimizer_tl --clustering sklearn --metrics --metrics_dir ./metrics/CIFAR10/5_runs_100_epochs/ -v --contrastive_strategy_1;
 ```
