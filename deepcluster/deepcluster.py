@@ -83,11 +83,6 @@ class DeepCluster(BaseEstimator):
         metrics_file: str = None,  # Path to metrics csv file, mainly when continuing a previous training after the process stopped
         metrics_metadata: str = None,
         reassign_optimizer_tl: bool = False,
-        optim_tl_lr: float = 0.05,
-        optim_tl_momentum: float = 0.9,
-        optim_tl_weight_decay: float = 10.0**-5,
-        optim_tl_beta1: float = 0.9,
-        optim_tl_beta2: float = 0.999,
         seed: int = None,
         sobel: bool = False,
         contrastive_strategy_1: bool = False,
@@ -157,11 +152,6 @@ class DeepCluster(BaseEstimator):
         self.optimizer = optim
         self.optimizer_tl = optim_tl
         self.reassign_optimizer_tl = reassign_optimizer_tl
-        self.optim_tl_lr = optim_tl_lr
-        self.optim_tl_momentum = optim_tl_momentum
-        self.optim_tl_weight_decay = optim_tl_weight_decay
-        self.optim_tl_beta1 = optim_tl_beta1
-        self.optim_tl_beta2 = optim_tl_beta2
         self.loss_criterion = loss_criterion
         self.epochs = epochs
         self.batch_size = batch_size
