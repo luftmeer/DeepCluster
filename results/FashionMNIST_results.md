@@ -12,7 +12,7 @@
   - green: Sobel filtering is active
 
 
-![image](../images/FashionMNIST_Overview_AlexNet_VGG16_Sobel.png)
+![image](../images/FashionMNIST_Overview_AlexNet_VGG16_ResNet18_FeedForward_Sobel.png)
 
 
 ### Commands for easy repetition
@@ -49,17 +49,17 @@ for i in {1..5}; do python3 main.py --arch VGG16 --input_dim 2 --sobel --num_cla
 
 #### ResNet18
 **Without Sobel**:
-```bash
+```bash (biolithe)
 for i in {1..3}; do python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 1 --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; done
 ```
 
-**With Sobel**: (biolithe)
+**With Sobel**: 
 ```bash
 for i in {1..3}; do python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; python3 main.py --arch ResNet18 --input_dim 2 --sobel --num_classes 10 --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method sklearn --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v; done
 ```
 
 **Adjusted class size**
-```bash
+```bash (bentonit)
 for i in 20 50 100; do python3 main.py --arch ResNet18 --input_dim 1 --num_classes $i --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch ResNet18 --input_dim 1 --num_classes $i --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch ResNet18 --input_dim 2 --num_classes $i --sobel --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering faiss --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v --remove_head; python3 main.py --arch ResNet18 --input_dim 2 --num_classes $i --sobel --epochs 25 --requires_grad --dataset FashionMNIST --ds_train --batch_size 128 --reassign_optimizer_tl --pca --pca_method faiss --pca_whitening --clustering sklearn --metrics --metrics_dir ./metrics/FashionMNIST/5_runs_100_epochs/ -v --remove_head; done
 ```
 

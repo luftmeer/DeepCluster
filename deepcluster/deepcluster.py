@@ -25,14 +25,10 @@ from torcheval.metrics import MulticlassAccuracy
 from torchvision import transforms
 from tqdm import tqdm
 
-from .utils import faiss_kmeans
-from .utils.benchmarking import Meter
-
-# from .utils.loss_functions import ContrastiveLoss
-from .utils.pseudo_labeled_dataset import (  # Keep this dataset for scikit-learn clustering
-    PseudoLabeledData,
-)
-from .utils.UnifiedSampler import UnifLabelSampler
+from .utils import faiss_kmeans # Faiss implementation, containing PCA and k-Means solution by Facebook Research
+from .utils.benchmarking import Meter # Simple Meter implementation for tracking purposes
+from .utils.pseudo_labeled_dataset import PseudoLabeledData # Keep this dataset for scikit-learn clustering
+from .utils.UnifiedSampler import UnifLabelSampler # Samlper used for faiss clustering result/dataset
 
 # Base folder for checkpoints
 BASE_CPT = "./checkpoints/"
@@ -65,14 +61,14 @@ class DeepCluster(BaseEstimator):
         loss_criterion: object,  # PyTorch Loss Function
         cluster_assign_tf: transforms,
         dataset_name: str,  # Name of the dataset when saving checkpoints
+        k: int = 1000, # k-classes
+        epochs: int = 500,  # Training Epoch
+        batch_size: int = 256,
         metrics_dir: str = None,  # Special metrics folder for a run
         requires_grad: bool = False,
         reassign_clustering: bool = False,
-        checkpoint: bool = False,
+        checkpoint: bool = False, # Activate when checkpoints supposed to be created
         checkpoint_file: str = None,  # Direct path to the checkpoint
-        epochs: int = 500,  # Training Epoch
-        batch_size: int = 256,
-        k: int = 1000,
         verbose: bool = False,  # Verbose output while training
         pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
         clustering_method: str = "faiss",
@@ -83,11 +79,6 @@ class DeepCluster(BaseEstimator):
         metrics_file: str = None,  # Path to metrics csv file, mainly when continuing a previous training after the process stopped
         metrics_metadata: str = None,
         reassign_optimizer_tl: bool = False,
-        optim_tl_lr: float = 0.05,
-        optim_tl_momentum: float = 0.9,
-        optim_tl_weight_decay: float = 10.0**-5,
-        optim_tl_beta1: float = 0.9,
-        optim_tl_beta2: float = 0.999,
         seed: int = None,
         sobel: bool = False,
         contrastive_strategy_1: bool = False,
@@ -157,11 +148,6 @@ class DeepCluster(BaseEstimator):
         self.optimizer = optim
         self.optimizer_tl = optim_tl
         self.reassign_optimizer_tl = reassign_optimizer_tl
-        self.optim_tl_lr = optim_tl_lr
-        self.optim_tl_momentum = optim_tl_momentum
-        self.optim_tl_weight_decay = optim_tl_weight_decay
-        self.optim_tl_beta1 = optim_tl_beta1
-        self.optim_tl_beta2 = optim_tl_beta2
         self.loss_criterion = loss_criterion
         self.epochs = epochs
         self.batch_size = batch_size

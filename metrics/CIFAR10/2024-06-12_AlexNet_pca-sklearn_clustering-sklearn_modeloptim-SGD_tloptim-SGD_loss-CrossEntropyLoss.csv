@@ -1,5 +1,0 @@
-#Namespace(arch='AlexNet', batch_size=128, beta1=0.9, beta1_tl=0.9, beta2=0.999, beta2_tl=0.999, checkpoint=None, clustering='sklearn', data_dir='./data', dataset='CIFAR10', epochs=5, input_dim=3, loss_fn='CrossEntropy', lr=0.05, lr_tl=0.05, metrics=True, metrics_file=None, momentum=0.9, momentum_tl=0.9, num_classes=10, optimizer='SGD', optimizer_tl='SGD', pca_method='sklearn', pca_reduction=256, pca_whitening=True, seed=42, sobel=False, verbose=False, weight_decay=1e-05, weight_decay_tl=1e-05)
-epoch,loss_avg,accuracy,nmi_true_ped,nmi_epochs,epoch_time,train_time,features_time,cluster_time,pca_time
-0,1.8743771,0.30903134,0.09284858363500284,0.0,408.59029388427734,222.63158226013184,88.63060307502747,13.617674589157104,20.550740957260132
-1,1.745474,0.39710277,0.06614533504443142,0.18266275398219728,553.4693231582642,190.9733488559723,85.73815584182739,11.954793930053711,24.340869903564453
-2,1.6346965,0.42662242,0.0537611529175488,0.2719835365532433,597.8935854434967,201.93949556350708,74.62384271621704,11.16773247718811,24.049527883529663

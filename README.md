@@ -65,12 +65,18 @@ Here is a figure of the process:
 
 ---
 
-## Metrics
+## Results
 
-For results on datasets, see:
+### A general overview for the datasets (MNIST, CIFAR10, FashionMNIST, GTSRB) after 25 epochs
+
+![image](/images/DeepCluster_Overview_4_Datasets_25_epochs.png)
+
+For detailed results on the chosen datasets, see:
 
 - [MNIST](/results/MNIST_results.md)
 - [CIFAR10](/results/CIFAR10_results.md)
+- [FashionMNIST](/results/FashionMNIST_results.md)
+- [GTSRB](/results/GTSRB_results.md)
 
 ---
 
