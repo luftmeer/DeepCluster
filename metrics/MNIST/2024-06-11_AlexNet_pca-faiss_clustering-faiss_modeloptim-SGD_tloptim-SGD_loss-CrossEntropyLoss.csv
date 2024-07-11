@@ -1,3 +1,0 @@
-#Namespace(arch='AlexNet', batch_size=128, beta1=0.9, beta1_tl=0.9, beta2=0.999, beta2_tl=0.999, checkpoint=None, clustering='faiss', data_dir='./data', dataset='MNIST', epochs=1, input_dim=1, loss_fn='CrossEntropy', lr=0.05, lr_tl=0.05, metrics=True, metrics_file=None, momentum=0.9, momentum_tl=0.9, num_classes=10, optimizer='SGD', optimizer_tl='SGD', pca_method='faiss', pca_reduction=256, pca_whitening=True, seed=42, sobel=False, verbose=True, weight_decay=1e-05, weight_decay_tl=1e-05)
-epoch,loss_avg,accuracy,nmi_true_ped,nmi_epochs,epoch_time,train_time,features_time,cluster_time,pca_time
-1,1.1409463,0.5749323,0.4742098050386378,0.40365256321815346,397.5887441635132,162.73882937431335,66.42386054992676,1.466383457183838,133.05383133888245

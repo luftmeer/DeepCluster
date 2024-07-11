@@ -25,14 +25,10 @@ from torcheval.metrics import MulticlassAccuracy
 from torchvision import transforms
 from tqdm import tqdm
 
-from .utils import faiss_kmeans
-from .utils.benchmarking import Meter
-
-# from .utils.loss_functions import ContrastiveLoss
-from .utils.pseudo_labeled_dataset import (  # Keep this dataset for scikit-learn clustering
-    PseudoLabeledData,
-)
-from .utils.UnifiedSampler import UnifLabelSampler
+from .utils import faiss_kmeans # Faiss implementation, containing PCA and k-Means solution by Facebook Research
+from .utils.benchmarking import Meter # Simple Meter implementation for tracking purposes
+from .utils.pseudo_labeled_dataset import PseudoLabeledData # Keep this dataset for scikit-learn clustering
+from .utils.UnifiedSampler import UnifLabelSampler # Samlper used for faiss clustering result/dataset
 
 # Base folder for checkpoints
 BASE_CPT = "./checkpoints/"
@@ -65,14 +61,14 @@ class DeepCluster(BaseEstimator):
         loss_criterion: object,  # PyTorch Loss Function
         cluster_assign_tf: transforms,
         dataset_name: str,  # Name of the dataset when saving checkpoints
+        k: int = 1000, # k-classes
+        epochs: int = 500,  # Training Epoch
+        batch_size: int = 256,
         metrics_dir: str = None,  # Special metrics folder for a run
         requires_grad: bool = False,
         reassign_clustering: bool = False,
-        checkpoint: bool = False,
+        checkpoint: bool = False, # Activate when checkpoints supposed to be created
         checkpoint_file: str = None,  # Direct path to the checkpoint
-        epochs: int = 500,  # Training Epoch
-        batch_size: int = 256,
-        k: int = 1000,
         verbose: bool = False,  # Verbose output while training
         pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
         clustering_method: str = "faiss",

@@ -1,5 +1,0 @@
-#Namespace(arch='AlexNet', batch_size=128, beta1=0.9, beta1_tl=0.9, beta2=0.999, beta2_tl=0.999, checkpoint=None, clustering='sklearn', data_dir='./data', dataset='tinyimagenet', epochs=50, input_dim=3, loss_fn='CrossEntropy', lr=0.05, lr_tl=0.05, metrics=True, metrics_file=None, momentum=0.9, momentum_tl=0.9, num_classes=200, optimizer='SGD', optimizer_tl='SGD', pca_method='sklearn', pca_reduction=256, pca_whitening=True, seed=42, sobel=False, verbose=False, weight_decay=1e-05, weight_decay_tl=1e-05)
-epoch,loss_avg,accuracy,nmi_true_ped,nmi_epochs,epoch_time,train_time,features_time,cluster_time,pca_time
-0,5.065054,0.023807146,0.13203645023905322,0.0,909.2052803039551,324.80678629875183,245.6017575263977,138.77499651908875,14.811603307723999
-0,5.0337405,0.02391704,0.13749643705700346,0.0,1054.880098581314,476.03098583221436,242.6146740913391,138.82393050193787,15.431361198425293
-0,5.0671697,0.02151934,0.13216268949311472,0.0,1088.7789459228516,500.76977944374084,242.1816008090973,140.04096937179565,14.915026426315308
