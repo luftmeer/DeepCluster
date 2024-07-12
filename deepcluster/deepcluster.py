@@ -55,38 +55,44 @@ METRICS_HEADER = [
 class DeepCluster(BaseEstimator):
     def __init__(
         self,
-        model: nn.Module,  # CNN Model
-        optim: optim.Optimizer,  # Optimizer for the parameters of the model
-        optim_tl: optim.Optimizer,  # Optimizer for the Top Layer Parameters
-        loss_criterion: object,  # PyTorch Loss Function
+        model: nn.Module,
+        optim: optim.Optimizer,
+        optim_tl: optim.Optimizer,
+        loss_criterion: object,
         cluster_assign_tf: transforms,
-        dataset_name: str,  # Name of the dataset when saving checkpoints
-        k: int = 1000, # k-classes
-        epochs: int = 500,  # Training Epoch
+        dataset_name: str,
+        k: int = 1000,
+        epochs: int = 500,
         batch_size: int = 256,
-        metrics_dir: str = None,  # Special metrics folder for a run
-        requires_grad: bool = False,
-        reassign_clustering: bool = False,
-        checkpoint: bool = False, # Activate when checkpoints supposed to be created
-        checkpoint_file: str = None,  # Direct path to the checkpoint
-        verbose: bool = False,  # Verbose output while training
-        pca_reduction: int = 256,  # PCA reduction value for the amount of features to be kept
-        clustering_method: str = "faiss",
         pca: bool = True,
         pca_method: str = "faiss",
+        pca_reduction: int = 256,
         pca_whitening: bool = True,
-        metrics: bool = True,
-        metrics_file: str = None,  # Path to metrics csv file, mainly when continuing a previous training after the process stopped
-        metrics_metadata: str = None,
+        clustering_method: str = "faiss",
+        reassign_clustering: bool = False,
+        requires_grad: bool = True,
+        remove_head: bool = True,
         reassign_optimizer_tl: bool = False,
-        seed: int = None,
         sobel: bool = False,
         contrastive_strategy_1: bool = False,
         contrastive_strategy_2: bool = False,
-        remove_head: bool = False,
         augmentation_fn: transforms = None,
+        checkpoint: bool = False,
+        checkpoint_file: str = None,
+        metrics: bool = True,
+        metrics_file: str = None,
+        metrics_dir: str = None,
+        metrics_metadata: str = None,
+        verbose: bool = False,
+        seed: int = None,
     ):
         """DeepCluster Implementation based on the paper 'Deep Clustering for Unsupervised Learning of Visual Features' by M. Caron, P. Bojanowski, A. Joulin and M. Douze (Facebook AI Research).
+        DeepCluster is a simple model that takes images as inputs to compute features by a given Convolutional Network. These features are (depending on the feature size) reduced with PCA.
+        The reduced features are then clustered by k-Means, creating "pseudo-labels" which are used to train the same Convolutional Network.
+        After training a self-supervised CNN has been trained without giving any additional information regarding their true labels.
+        
+        Due to improvements by Contrastive Learning, the simple DeepCluster model is also trained by one of two contrastive strategies. 
+        Where the first strategy calculates an additional loss, the second strategy uses additional augmentation on the input images trying to improve the CNNs overall result.
 
         Parameters
         ----------
@@ -100,92 +106,142 @@ class DeepCluster(BaseEstimator):
             The used optimizer which is only used to optimize the top layer of the CNN.
 
         loss_criterion: object,
-            Loss function for the model.
+           Main loss function for the model.
 
         cluster_assign_tf: transforms,
-            Transform object for the created dataset containing the original data points which are then merged with the computated features.
+            Transformation for the created dataset containing the original data points which are then merged with the computated features.
 
         dataset_name: str,
             A simple name of the dataset which is used to define the filename as well as the folder name for the checkpoints.
 
-        checkpoint: str,
-            The folder path to a checkpoint. If this is set, the Algorithm will load the information from the given filepath and use them to continue the training from that state.
+        k: int, default=1000,
+            Cluster amount for the k-Means algorithm.
 
         epochs: int, default=500,
             How many epochs are done for the training.
 
         batch_size: int, default=256,
             Size of the batches which is necessary for creating the new dataset as well as for the feature calculation itself.
-
-        k: int, default=1000,
-            Cluster amount for the k-Means algorithm.
-
-        verbose: bool, default=False,
-            If certain outputs should be printed or not.
-
-        pca_reduction: int, default=256,
-            Defines to how many features the dataset is reduced by the PCA algorithm of choice.
-
-        clustering_method: str, default='faiss',
-            Which method should be used to calculate the features.
-
-            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al. TODO: Link to source/Paper name/DOI
-            sklearn: Uses the standard k-Means algorithm of the scikit-learn library.
-
+        
+        pca: bool, default=True,
+            An option to either activate (default) or deactivate PCA completely. If set to false, the computed features are directly clustered. This is especially the case for the FeedForward CNN, since its feature space is small enough to be not PCA reduced.
+        
         pca_method: str, default='faiss',
             Which PCA reduction method to use for the preprocession of the computated features.
 
             faiss: Uses the PCA reduction method implemented by Facebook AI Research.
             sklearn: Uses the PCA reduction method implemented in the scikit-learn library.
 
-            Both methods automatically whiten the features.
+            Both methods have an option to also whiten the computed features. See the option pca_whitening.
+
+        pca_reduction: int, default=256,
+            Defines to how many features the dataset is reduced by the PCA algorithm of choice.
 
         pca_whitening: bool, default=True,
             If set to True, the PCA reduction method will whiten the reduced dataset.
+
+        clustering_method: str, default='faiss',
+            Which method should be used to calculate the features.
+
+            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al. [https://arxiv.org/abs/1702.08734]
+            sklearn: Uses the standard k-Means algorithm of the scikit-learn library.
+
+        reassign_clustering: bool, default=False,
+            Reassigning the clustering algorithm each epoch could have certain impacts on the clustering result, as could not reassigning it. This outcome can be tested and investigated with this option.
+        
+        requires_grad: bool, default=True,
+            Tells PyTorch's autograd if it should record operations on a tensor. Here when training a model.
+        
+        remove_head: bool, default=True,
+            In the original implementation, the authors decided to remove the top_layer information at the beginning of each epoch, calculate the features and reattach a new top_layer to the model. This option does exactly this to reproduce similar results.
+        
+        reassign_optimizer_tl: bool, default=False,
+            This option is the result of the original implementation. As the option "remove_head" always reset the top_layer of the CNN model, this option completely reassigns the optimizer for the top_layer parameters to investigate these outcomes.
+        
+        sobel: bool, default=False,
+            A signaling option for contrastive learning to use sobel for the input image when computing features.
+        
+        contrastive_strategy_1: bool, default=False,
+            TODO
+        
+        contrastive_strategy_1: bool, default=False,
+            TODO
+        
+        augmentation_fn: transforms, default=None,
+            TODO
+        
+        checkpoint: bool, default=False,
+            Option to store a checkpoint at every epoch. This automatically will also store a best model when reaching the best training accuracy.
+        
+        checkpoint_file: str, default=None,
+            The folder path to a checkpoint. If this is set and checkpoint is set to True, the Algorithm will load the information from the given filepath and use them to continue the training from that state and epoch.
+        
+        metrics: bool, default=False,
+            This option activates metrics. It will record elapsed time for Feature Computation, PCA, Clustering, Training and Epoch. Metrics are stored in the metrics/ folder in the root directoy of this repository.
+        
+        metrics_file: str, default=None,
+            If a run shall be continued, from a checkpoint, this variable will define the metrics file where the upcoming data is to be stored in. All data is simply appended to the given file.
+            
+        metrics_dir: str, default=None,
+            If a specific folder, for example for a specific test case, is necessary. The folder and path must exist before storing the metrics.
+        
+        metrics_metadata: str, default=None,
+            This is additional data that can be stored inside a metrics file to better distinguish each experiment. It is always added first when creating a new metrics file.
+
+        verbose: bool, default=False,
+            Expressive outputs displaying intermediate epoch results, such as the avg. loss, accuracies and NMIs.
+        
+        seed: int, default=None,
+            This allows to set a seed for numpy and PyTorch for reproduction.
         """
+        # Base requirements
         self.model = model
-        self.requires_grad = requires_grad
         self.optimizer = optim
         self.optimizer_tl = optim_tl
-        self.reassign_optimizer_tl = reassign_optimizer_tl
         self.loss_criterion = loss_criterion
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.k = k
-        self.verbose = verbose
         self.cluster_assign_transform = cluster_assign_tf
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.reassign_clustering = reassign_clustering
-        self.clustering_method = clustering_method
+        self.dataset_name = dataset_name
+        self.k = k
+        self.epochs = epochs
+        self.start_epoch = 0  # Start epoch, necessary when resuming from previous checkpoint
+        self.batch_size = batch_size
         self.pca = pca
         self.pca_method = pca_method
         self.pca_reduction_value = pca_reduction
-        self.checkpoint = checkpoint
-        self.checkpoint_file = checkpoint_file
-        self.dataset_name = dataset_name
-        self.start_epoch = (
-            0  # Start epoch, necessary when resuming from previous checkpoint
-        )
-        self.cluster_logs = []
-        self.metrics = metrics
-        self.metrics_metadata = metrics_metadata
         self.pca_whitening = pca_whitening
+        self.clustering_method = clustering_method
+        self.clustering = None # Clustering variable which is later (re)set in applay_clustering()
+        self.reassign_clustering = reassign_clustering
+        self.cluster_logs = [] # Stores all previous clustering results and is used for the epoch NMI calculation
+        self.requires_grad = requires_grad
+        self.remove_head = remove_head
+        self.reassign_optimizer_tl = reassign_optimizer_tl
+        
+        # Contrastive Learning
         self.sobel = sobel
-
+        self.contrastive_strategy_1 = contrastive_strategy_1
+        self.contrastive_strategy_2 = contrastive_strategy_2
+        self.augmentation_fn = augmentation_fn
         # Contrastive Loss using pseudo labels
         self.contrastive_criterion = ContrastiveLoss()
 
         # contrastive loss per positive pair in the batch
         # was used in SimCLR and MoCo
         self.nt_xent_loss = SelfSupervisedLoss(NTXentLoss(temperature=0.5))
+        
+        # Optional
+        self.checkpoint = checkpoint
+        self.checkpoint_file = checkpoint_file
+        self.metrics = metrics
+        self.metrics_metadata = metrics_metadata
 
-        self.augmentation_fn = augmentation_fn
-
-        # flags for different contrastive strategies
-        self.contrastive_strategy_1 = contrastive_strategy_1
-        self.contrastive_strategy_2 = contrastive_strategy_2
-        self.remove_head = remove_head
-
+        # Independently define the used hardware
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Raise IOError when the local hardware is incompatible when trying to use faiss on a CPU.
+        if ((self.pca and self.pca_method == "faiss") or self.clustering_method == "faiss") and self.device.type == 'cpu':
+            raise IOError("Running and using faiss requires cuda compatible hardware.")
+        
         # Create a file prefix which can be used by both checkpoint and metrics file to keep track of both
         file_prefix = []
         file_prefix.append(
@@ -221,20 +277,23 @@ class DeepCluster(BaseEstimator):
                     f"{BASE_METRICS}{self.dataset_name}/{'_'.join(file_prefix)}.csv"
                 )
 
-        self.clustering = None
 
         # Placeholder for the best accuracy of a Model at an epoch
         # A current largest Accuracy of a model will invoke a special checkpoint saving to prevent overwriting in the future
         # Only a current best model will overwrite a previous best model, when the accuracy is greater than the previous one
         self.best_model = 0.0
 
+        # If checkpoint and no file path is given, a new filepath for a newly created checkpoint is given.
         if self.checkpoint and not self.checkpoint_file:
             self.checkpoint_file = (
                 f"{BASE_CPT}/{self.dataset_name}/{'_'.join(file_prefix)}.cpt"
             )
+        
+        # Extra output
+        self.verbose = verbose
 
         # Random Seed Setting
-        if seed:
+        if seed is not None:
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             np.random.seed(seed)
@@ -246,6 +305,9 @@ class DeepCluster(BaseEstimator):
         ----------
         epoch: int,
             The current epoch at which the checkpoint is created at.
+
+        best_model: bool, default=False,
+            Extra flag if the checkpoint is a best model. This will attach an additional '.best' to the filename.
         """
         # Create checkpoint folder if it doesn't exist yet
         if not os.path.exists(BASE_CPT):
@@ -299,6 +361,16 @@ class DeepCluster(BaseEstimator):
         return
 
     def fit(self, data: data.DataLoader):
+        """Fitting function of the DeepCluster Model, running epoch iterations.
+        First, the features are computed with the help of the chosen CNN model.
+        Then the features are either reduced by PCA or directly clustered by the chosen clustering implementation of k-Means.
+        Finally the model is trained and the process starts from the beginning.
+
+        Parameters
+        ----------
+        data: torch.utils.data.DataLoader,
+            Input data for training the model.
+        """
         self.model.features = nn.DataParallel(self.model.features)
         self.model.to(self.device)
 
