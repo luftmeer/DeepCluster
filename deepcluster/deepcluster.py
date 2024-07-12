@@ -143,7 +143,7 @@ class DeepCluster(BaseEstimator):
         clustering_method: str, default='faiss',
             Which method should be used to calculate the features.
 
-            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al. [https://arxiv.org/abs/1702.08734]
+            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al., from "Billion-scale similarity search with GPUs" [https://arxiv.org/abs/1702.08734]
             sklearn: Uses the standard k-Means algorithm of the scikit-learn library.
 
         reassign_clustering: bool, default=False,
