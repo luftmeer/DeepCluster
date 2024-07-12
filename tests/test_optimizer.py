@@ -37,11 +37,11 @@ class TestOptimizerLoader(unittest.TestCase):
         """
         with self.assertRaises(ValueError) as context:
             optimizer_loader('RMSprop', self.parameters)
-        self.assertFalse('RMSprop ist not supported.' in str(context.exception))
+            self.assertEqual(f'Selected Optimizer RMSprop not supported.' in str(context.exception))
 
     def test_missing_parameters(self):
         """
-            Tests with not parameters
+            Tests with no parameters
         """
         with self.assertRaises(TypeError):
             optimizer_loader('SGD')
