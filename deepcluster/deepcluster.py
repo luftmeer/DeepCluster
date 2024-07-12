@@ -421,22 +421,26 @@ class DeepCluster(BaseEstimator):
                     self.cluster_assign_transform,
                 )
 
-            # Sampler -> Random
-            # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            # sampler = torch.utils.data.RandomSampler(train_dataset)
+            # Define a Sampler
             if self.clustering_method == "faiss":
                 sampler = UnifLabelSampler(
                     len(train_dataset), self.clustering.images_lists
                 )
             else:
                 sampler = torch.utils.data.RandomSampler(train_dataset)
-            # Create Training Dataset
+            
+            # Create Training Data
+            if self.contrastive_strategy_2:
+                drop_last = True
+            else:
+                drop_last = False
+                
             train_data = torch.utils.data.DataLoader(
                 train_dataset,
                 batch_size=self.batch_size,
                 sampler=sampler,
                 pin_memory=True,
-                drop_last=True,  # drop last for nt_xent_loss
+                drop_last=drop_last,  # drop last for nt_xent_loss
             )
 
             if self.remove_head:
