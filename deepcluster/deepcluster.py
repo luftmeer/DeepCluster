@@ -999,15 +999,10 @@ class DeepCluster(BaseEstimator):
             5. Computes the output of the model's top layer.
             6. Returns the features and the output.
         """
-
-        if self.sobel:
-            input = self.sobel(input)
-
-        features = self.model.features(input)
-
-        features = torch.flatten(features, 1)
-
-        features = self.model.classifier(features)
+        self.model.compute_features = True
+        features = self.model(input)
+        self.model.compute_features = False
+        
         output = self.model.top_layer(features)
 
         return features, output
