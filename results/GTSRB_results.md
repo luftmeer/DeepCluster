@@ -1,16 +1,8 @@
 ## GTSRB
-- Tested with faiss and scikit-learn library for both PCA and k-Means clustering with each possible combination
-- Plots:
-    1. Average loss for each epoch
-    2. Training accuracy for pseudo-labels and output
-    3. True accuracy for true labels and output
-    4. NMI tested on the true labels and the pseudo-labels
-    5. NMI tested on the clustering results of the current and previous epoch (at first epoch always 0.0)
-    6. Time take for each segment and total (blue) -> TODO: Coloring
-- Colors:
-  - blue: Sobel filtering is **not** active
-  - green: Sobel filtering is active
 
+For the Dataset, various setups were run for 25 epochs to get a general impression of the algorithms.
+By simply comparing both PCA methods, neither faiss nor scikit-learn's implementation were able to outperform each other. We clearly noticed that no PCA method created better environments for the upcoming clustering algorithm.
+Instead, we noticed that 
 
 ![image](../images/GTSRB_Overview_AlexNet_VGG16_ResNet18_FeedForward_Sobel.png)
 
