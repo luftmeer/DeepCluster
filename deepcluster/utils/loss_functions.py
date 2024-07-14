@@ -1,6 +1,6 @@
 from torch import nn
 
-LOSS_FUNCTIONS = ["L1", "L2", "MSE", "CrossEntropy"]
+LOSS_FUNCTIONS = ["CrossEntropy"]
 
 
 def loss_function_loader(loss_fn: str):
@@ -19,9 +19,5 @@ def loss_function_loader(loss_fn: str):
     if loss_fn not in LOSS_FUNCTIONS:
         raise ValueError(f"Selected loss function {loss_fn} not supported.")
 
-    if loss_fn == "L1":
-        return nn.L1Loss()
-    elif loss_fn in ["L2", "MSE"]:
-        return nn.MSELoss()
     elif loss_fn == "CrossEntropy":
         return nn.CrossEntropyLoss()

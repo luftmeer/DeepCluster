@@ -143,7 +143,7 @@ class DeepCluster(BaseEstimator):
         clustering_method: str, default='faiss',
             Which method should be used to calculate the features.
 
-            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al. [https://arxiv.org/abs/1702.08734]
+            faiss: Uses the k-Means implementation by Facebook AI Research which uses a GPU optimized algorithm by Johson et. al., from "Billion-scale similarity search with GPUs" [https://arxiv.org/abs/1702.08734]
             sklearn: Uses the standard k-Means algorithm of the scikit-learn library.
 
         reassign_clustering: bool, default=False,
@@ -421,22 +421,26 @@ class DeepCluster(BaseEstimator):
                     self.cluster_assign_transform,
                 )
 
-            # Sampler -> Random
-            # TODO: Find a solution for a Uniform Sampling / When Found -> Benchmark against a simple random Sampling
-            # sampler = torch.utils.data.RandomSampler(train_dataset)
+            # Define a Sampler
             if self.clustering_method == "faiss":
                 sampler = UnifLabelSampler(
                     len(train_dataset), self.clustering.images_lists
                 )
             else:
                 sampler = torch.utils.data.RandomSampler(train_dataset)
-            # Create Training Dataset
+            
+            # Create Training Data
+            if self.contrastive_strategy_2:
+                drop_last = True
+            else:
+                drop_last = False
+                
             train_data = torch.utils.data.DataLoader(
                 train_dataset,
                 batch_size=self.batch_size,
                 sampler=sampler,
                 pin_memory=True,
-                drop_last=True,  # drop last for nt_xent_loss
+                drop_last=drop_last,  # drop last for nt_xent_loss
             )
 
             if self.remove_head:
@@ -556,17 +560,20 @@ class DeepCluster(BaseEstimator):
         """
         Trains the model using the default DeepCluster algorithm.
 
-        Args:
-            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
-                                        input data, pseudo-labels, and true labels.
+        Parameters
+        ----------
+        train_data: torch.utils.data.DataLoader,
+            DataLoader containing the training data, with each batch providing input data, pseudo-labels, and true labels.
 
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
-                - torch.Tensor: Overall accuracy computed using pseudo-labels.
-                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
-                - torch.Tensor: Losses from the clustering loss for each batch.
-                - torch.Tensor: Losses from the contrastive loss for each batch.
+        Returns
+        -------
+        tuple: 
+        A tuple containing:
+            - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+            - torch.Tensor: Overall accuracy computed using pseudo-labels.
+            - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+            - torch.Tensor: Losses from the clustering loss for each batch.
+            - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
         # Set model to train mode
@@ -664,17 +671,20 @@ class DeepCluster(BaseEstimator):
         Trains the model using a combined contrastive and clustering loss strategy.
         It uses Strategy 1, where the contrastive loss is calculated using the features from the model and the pseudo-labels.
 
-        Args:
-            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
-                                        input data, pseudo-labels, and true labels.
+        Parameters
+        ----------
+        train_data: torch.utils.data.DataLoader,
+            DataLoader containing the training data, with each batch providing input data, pseudo-labels, and true labels.
 
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
-                - torch.Tensor: Overall accuracy computed using pseudo-labels.
-                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
-                - torch.Tensor: Losses from the clustering loss for each batch.
-                - torch.Tensor: Losses from the contrastive loss for each batch.
+        Returns
+        -------
+        tuple: 
+        A tuple containing:
+            - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+            - torch.Tensor: Overall accuracy computed using pseudo-labels.
+            - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+            - torch.Tensor: Losses from the clustering loss for each batch.
+            - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
         # Set model to train mode
@@ -769,17 +779,20 @@ class DeepCluster(BaseEstimator):
         It uses Strategy 2, where the contrastive loss is calculated using the features of two augmented images.
         Contrastive loss is calculated using the features of two augmented images.
 
-        Args:
-            train_data (data.DataLoader): DataLoader containing the training data, with each batch providing
-                                        input data, pseudo-labels, and true labels.
+        Parameters
+        ----------
+        train_data: torch.utils.data.DataLoader,
+            DataLoader containing the training data, with each batch providing input data, pseudo-labels, and true labels.
 
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
-                - torch.Tensor: Overall accuracy computed using pseudo-labels.
-                - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
-                - torch.Tensor: Losses from the clustering loss for each batch.
-                - torch.Tensor: Losses from the contrastive loss for each batch.
+        Returns
+        -------
+        tuple: 
+        A tuple containing:
+            - torch.Tensor: Losses from the combined contrastive and clustering loss for each batch.
+            - torch.Tensor: Overall accuracy computed using pseudo-labels.
+            - torch.Tensor: Unsupervised clustering accuracy computed using true labels.
+            - torch.Tensor: Losses from the clustering loss for each batch.
+            - torch.Tensor: Losses from the contrastive loss for each batch.
         """
 
         # Set model to train mode
@@ -911,25 +924,29 @@ class DeepCluster(BaseEstimator):
     def get_initial_logs(self, train_data: data.DataLoader) -> tuple:
         """
         Initializes and returns logging structures for tracking training metrics.
-
-        Args:
-            train_data (data.DataLoader): DataLoader containing the training data.
-
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: Tensor initialized to track the total losses for each batch.
-                - torch.Tensor: Tensor initialized to track the contrastive losses for each batch.
-                - torch.Tensor: Tensor initialized to track the deep cluster losses for each batch.
-                - MulticlassAccuracy: Metric object for tracking accuracy.
-                - list: List for storing predicted labels.
-                - list: List for storing true labels.
-
+        
         The function initializes tensors and lists for logging the following metrics:
             - Total losses per batch.
             - Contrastive losses per batch.
             - Deep cluster losses per batch.
             - Predicted labels for accuracy computation.
             - True labels for accuracy computation.
+
+        Parameters
+        ----------
+        train_data. torch.utils.data.DataLoader,
+            DataLoader containing the training data.
+
+        Returns
+        -------
+        tuple: 
+        A tuple containing:
+            - torch.Tensor: Tensor initialized to track the total losses for each batch.
+            - torch.Tensor: Tensor initialized to track the contrastive losses for each batch.
+            - torch.Tensor: Tensor initialized to track the deep cluster losses for each batch.
+            - MulticlassAccuracy: Metric object for tracking accuracy.
+            - list: List for storing predicted labels.
+            - list: List for storing true labels.
         """
 
         accuracy_metric = MulticlassAccuracy()
@@ -957,19 +974,18 @@ class DeepCluster(BaseEstimator):
     def do_backward_pass(self, loss: torch.Tensor) -> None:
         """
         Performs the backward pass and updates model weights based on the given loss.
-
-        Args:
-            loss (torch.Tensor): The computed loss for which gradients will be calculated.
-
-        Returns:
-            None
-
+        
         The function performs the following steps:
             1. Resets the gradients of the model's parameters.
             2. Resets the gradients of the top layer's parameters.
             3. Computes the gradients by backpropagating the loss.
             4. Updates the model's parameters using the optimizer.
             5. Updates the top layer's parameters using the top layer optimizer.
+
+        Parameter
+        ---------
+        loss: torch.Tensor, 
+            The computed loss for which gradients will be calculated.       
         """
 
         self.optimizer.zero_grad()
@@ -982,15 +998,6 @@ class DeepCluster(BaseEstimator):
         """
         Computes the features and output of the model for a given input.
         Is used for both contrastive stragegies, as we need the features for the contrastive loss calculation.
-
-        Args:
-            input (torch.Tensor): The input data for the model.
-
-        Returns:
-            tuple: A tuple containing:
-                - torch.Tensor: The features extracted by the model.
-                - torch.Tensor: The output of the model's top layer.
-
         The function performs the following steps:
             1. Applies the Sobel filter to the input if specified.
             2. Computes the features using the model's feature extractor.
@@ -998,6 +1005,18 @@ class DeepCluster(BaseEstimator):
             4. Passes the features through the model's classifier.
             5. Computes the output of the model's top layer.
             6. Returns the features and the output.
+
+        Parameter
+        ---------
+        input: torch.Tensor,
+            The input data for the model.
+
+        Returns
+        -------
+        tuple: 
+        A tuple containing:
+            - torch.Tensor: The features extracted by the model.
+            - torch.Tensor: The output of the model's top layer.
         """
         self.model.compute_features = True
         features = self.model(input)
@@ -1069,7 +1088,7 @@ class DeepCluster(BaseEstimator):
         """Applies PCA reduction on the computed features and returns the transformed data.
         After applying PCA on the features, the data is L2-normalized.
 
-        Parameters
+        Parameter
         ----------
         features: np.ndarray,
             Computed features to be reduced by the selected PCA method.
@@ -1142,7 +1161,7 @@ class DeepCluster(BaseEstimator):
     ) -> data.Dataset:
         """This function executes the PCA + k-Means algorithm, which are chosen when initializing the algorithm.
 
-        Parameters
+        Parameter
         ----------
         features: np.ndarray,
             Calculated features which are to be clustered.
@@ -1159,7 +1178,7 @@ class DeepCluster(BaseEstimator):
         """Helper function to reassign a optimizer.
         Supported for SGD and Adam optimizers.
 
-        Parameters
+        Parameter
         ----------
         current_optimizer: optim.Optimizer,
             The currently used optimizer where the necessary information is extracted and to be "reset".
@@ -1198,7 +1217,8 @@ class DeepCluster(BaseEstimator):
     ):
         """Function for better overview when printing epoch results after the training process has been completed.
 
-        Parameters
+        Parameter
+        --------
         epoch: int,
             Current epoch.
 
@@ -1320,6 +1340,13 @@ class DeepCluster(BaseEstimator):
         return
 
     def print_metrics(self, epoch: int):
+        """A helper function to print information regarding the elapsed time for each step and the total time.
+
+        Parameter
+        ---------
+        epoch: int,
+            The current epoch from where the elapsed time results of.
+        """
 
         print("-" * 15, f" Metrics after {epoch+1} Epochs ", "-" * 15)
         print(
