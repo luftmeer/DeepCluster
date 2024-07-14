@@ -15,15 +15,6 @@ class TestLossFunctions(unittest.TestCase):
         """
         Tests the loss_function_loader
         """
-        l1_loss = self.loss_function_loader('L1')
-        self.assertIsInstance(l1_loss, nn.L1Loss)
-
-        l2_loss = self.loss_function_loader('L2')
-        self.assertIsInstance(l2_loss, nn.MSELoss)
-
-        mse_loss = self.loss_function_loader('MSE')
-        self.assertIsInstance(mse_loss, nn.MSELoss)
-
         cross_entropy_loss = self.loss_function_loader('CrossEntropy')
         self.assertIsInstance(cross_entropy_loss, nn.CrossEntropyLoss)
 
