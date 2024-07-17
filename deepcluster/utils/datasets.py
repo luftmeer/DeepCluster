@@ -187,7 +187,7 @@ def dataset_loader(
     
     elif dataset_name == "Imagenette":
         # check if Folder exists
-        if not os.path.exists(f'{data_dir}/imagenettev2/'):
+        if not os.path.exists(f'{data_dir}/imagenette2/'):
             datasets.Imagenette(
                 root=data_dir,
                 split=split,
@@ -196,8 +196,8 @@ def dataset_loader(
             )
         
         # Create ImageFolder Dataset
-        datasets.ImageFolder(
-            root=f'{data_dir}/imagenettev2/{split}',
+        dataset = datasets.ImageFolder(
+            root=f'{data_dir}/imagenette2/{split}',
             transform=tf,
         )
         
