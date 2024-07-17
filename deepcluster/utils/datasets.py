@@ -8,6 +8,7 @@ from tinyimagenet import TinyImageNet
 from torch.utils import data
 from torchvision import datasets, transforms
 from tqdm import tqdm
+import os
 
 AVAILABLE_DATASETS = [
     "CIFAR10",
@@ -18,6 +19,7 @@ AVAILABLE_DATASETS = [
     "tinyimagenet",
     "STL10",
     "GTSRB",
+    "Imagenette", # Only full
 ]
 
 BASE_TRANSFORM = [
@@ -67,6 +69,10 @@ NORMALIZATION = {
     "GTSRB": transforms.Normalize(
         mean=[0.350533, 0.31418112, 0.32720327], std=[0.2752962, 0.25941706, 0.26697195]
     ),
+    "Imagenette": transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
 }
 
 
@@ -178,7 +184,23 @@ def dataset_loader(
 
         # add targets to the dataset
         dataset.targets = np.array(list(create_numpy_dataset_targets(dataset)))
-
+    
+    elif dataset_name == "Imagenette":
+        # check if Folder exists
+        if not os.path.exists(f'{data_dir}/imagenettev2/'):
+            datasets.Imagenette(
+                root=data_dir,
+                split=split,
+                size='full',
+                download=True
+            )
+        
+        # Create ImageFolder Dataset
+        datasets.ImageFolder(
+            root=f'{data_dir}/imagenettev2/{split}',
+            transform=tf,
+        )
+        
     else:
         loader = getattr(datasets, dataset_name)
         dataset = loader(root=data_dir, train=train, download=True, transform=tf)
