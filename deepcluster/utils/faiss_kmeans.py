@@ -57,7 +57,7 @@ class ReassignedDataset(data.Dataset):
                 pseudolabel = label_to_idx[pseudolabels[j]]
                 images.append((path, pseudolabel))
         elif hasattr(dataset, 'imgs'):
-            for j, idx in tqdm(enumerate(image_indexes), desc='Creating Pseudo-Labeld Dataset', total=len(dataset.data)):
+            for j, idx in tqdm(enumerate(image_indexes), desc='Creating Pseudo-Labeld Dataset', total=len(dataset.imgs)):
                 path, _ = dataset.imgs[idx]
                 pseudolabel = label_to_idx[pseudolabels[j]]
                 images.append((path, pseudolabel))
@@ -72,7 +72,9 @@ class ReassignedDataset(data.Dataset):
         """
         img, pseudolabel = self.imgs[index]
         true_target = self.true_targets[index]
-        # img = pil_loader(path)
+        if isinstance(img, str):
+            img = pil_loader(img)
+            
         if self.transform is not None:
 
             img = self.transform(img)
