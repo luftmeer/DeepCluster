@@ -13,6 +13,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image, ImageFile
 from scipy.sparse import csr_matrix, find
+from tqdm import tqdm
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -43,19 +44,23 @@ class ReassignedDataset(data.Dataset):
     """
 
     def __init__(self, image_indexes, pseudolabels, dataset, transform=None):
-        self.imgs = self.make_dataset(image_indexes, pseudolabels, dataset.data)
+        self.imgs = self.make_dataset(image_indexes, pseudolabels, dataset)
         self.transform = transform
         self.true_targets = dataset.targets
 
     def make_dataset(self, image_indexes, pseudolabels, dataset):
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
-        targets = []
-        for j, idx in enumerate(image_indexes):
-            path = dataset[idx]
-            pseudolabel = label_to_idx[pseudolabels[j]]
-            images.append((path, pseudolabel))
-            targets.append(pseudolabel)
+        if hasattr(dataset, 'data'):
+            for j, idx in tqdm(enumerate(image_indexes), desc='Creating Pseudo-Labeld Dataset', total=len(dataset.data)):
+                path = dataset.data[idx]
+                pseudolabel = label_to_idx[pseudolabels[j]]
+                images.append((path, pseudolabel))
+        elif hasattr(dataset, 'imgs'):
+            for j, idx in tqdm(enumerate(image_indexes), desc='Creating Pseudo-Labeld Dataset', total=len(dataset.data)):
+                path, _ = dataset.imgs[idx]
+                pseudolabel = label_to_idx[pseudolabels[j]]
+                images.append((path, pseudolabel))
         return images
 
     def __getitem__(self, index):
